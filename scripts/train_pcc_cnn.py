@@ -50,7 +50,7 @@ EPOCHS = 50
 
 LEARNING_RATE = 0.001
 
-DEBUG_ONE_FOLD = True
+DEBUG_ONE_FOLD = False
 
 
 # ==========================================================
@@ -308,7 +308,13 @@ print("\n10-Fold Stratified Cross Validation Initialized")
 # ==========================================================
 # 10-FOLD CROSS VALIDATION
 # ==========================================================
+# ==========================================================
+# RESULTS CONTAINER
+# ==========================================================
+
 all_results = []
+
+best_accuracy = 0.0
 for fold, (train_idx, test_idx) in enumerate(skf.split(X, y), start=1):
 
     print("\n" + "=" * 70)
@@ -536,6 +542,10 @@ for fold, (train_idx, test_idx) in enumerate(skf.split(X, y), start=1):
     
     fnr = FN / (FN + TP)
     
+    # ==========================================================
+    # STORE CURRENT FOLD RESULTS
+    # ==========================================================
+    
     print("\nSpecificity :", round(specificity,4))
     print("False Positive Rate :", round(fpr,4))
     print("False Negative Rate :", round(fnr,4))
@@ -551,24 +561,66 @@ for fold, (train_idx, test_idx) in enumerate(skf.split(X, y), start=1):
     "FPR": fpr,
     "FNR": fnr
     })
+    
+    # ==========================================================
+    # SAVE BEST MODEL
+    # ==========================================================
+    if accuracy > best_accuracy:
+     
+     best_accuracy = accuracy
+     
+     model.save(
+
+        os.path.join(
+
+            MODEL_DIR,
+
+            "best_model.keras"
+
+        )
+
+     )
+     
+     print("Best model updated.")
     # ------------------------------------------------------
     # Debug Mode
     # ------------------------------------------------------
 
     if DEBUG_ONE_FOLD:
         break
-        
+ # ==========================================================
+# SAVE FINAL RESULTS
+# ==========================================================
+
 results_df = pd.DataFrame(all_results)
 
-results_df.to_csv(
-    os.path.join(
-        RESULT_DIR,
-        "10Fold_Results.csv"
-    ),
-    index=False
-)
+print("\n")
+print("=" * 60)
+print("10-FOLD RESULTS")
+print("=" * 60)
 
 print(results_df)
 
-print("\nAverage Results")
+print("\nAverage Performance")
+
 print(results_df.mean(numeric_only=True))
+
+print("\nStandard Deviation")
+
+print(results_df.std(numeric_only=True))
+
+results_df.to_csv(
+
+    os.path.join(
+
+        RESULT_DIR,
+
+        "10Fold_Results.csv"
+
+    ),
+
+    index=False
+
+)
+
+print("\nResults saved successfully.")
