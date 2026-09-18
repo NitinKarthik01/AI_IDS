@@ -4,11 +4,10 @@ import warnings
 
 import numpy as np
 import pandas as pd
+import tensorflow as tf
 
-
-
-from sklearn.preprocessing import LabelEncoder, StandardScaler
 from sklearn.model_selection import StratifiedKFold
+from sklearn.preprocessing import LabelEncoder, StandardScaler
 from sklearn.metrics import (
     accuracy_score,
     precision_score,
@@ -18,43 +17,175 @@ from sklearn.metrics import (
     confusion_matrix
 )
 
-import tensorflow as tf
 from tensorflow.keras.models import Sequential
 from tensorflow.keras.layers import (
+    Input,
     Conv1D,
-    Dense,
     Flatten,
-    Input
+    Dense
 )
 from tensorflow.keras.optimizers import Adam
-from tensorflow.keras.callbacks import EarlyStopping
+from tensorflow.keras.callbacks import (
+    EarlyStopping,
+    ModelCheckpoint
+)
 
 warnings.filterwarnings("ignore")
 
-
-# ===========================
-# RANDOM SEED
-# ===========================
+# ==========================================================
+# CONFIGURATION
+# ==========================================================
 
 SEED = 42
 
+CLASSIFICATION = "binary"
+
+THRESHOLD = "0.10"
+
+N_SPLITS = 10
+
+BATCH_SIZE = 256
+
+EPOCHS = 50
+
+LEARNING_RATE = 0.001
+
+DEBUG_ONE_FOLD = True
+
+
+# ==========================================================
+# BUILD PCC-CNN MODEL
+# ==========================================================
+
+def build_pcc_cnn(input_shape, classification="binary", num_classes=None):
+
+    model = Sequential(name="PCC_CNN")
+
+    # ------------------------------------------------------
+    # Input Layer
+    # ------------------------------------------------------
+    model.add(Input(shape=input_shape))
+
+    # ------------------------------------------------------
+    # Convolution Block 1
+    # ------------------------------------------------------
+    model.add(
+        Conv1D(
+            filters=96,
+            kernel_size=4,
+            strides=1,
+            padding="same",
+            activation="relu",
+            name="Conv1"
+        )
+    )
+
+    # ------------------------------------------------------
+    # Convolution Block 2
+    # ------------------------------------------------------
+    model.add(
+        Conv1D(
+            filters=64,
+            kernel_size=3,
+            strides=1,
+            padding="same",
+            activation="relu",
+            name="Conv2"
+        )
+    )
+
+    # ------------------------------------------------------
+    # Convolution Block 3
+    # ------------------------------------------------------
+    model.add(
+        Conv1D(
+            filters=32,
+            kernel_size=2,
+            strides=1,
+            padding="same",
+            activation="relu",
+            name="Conv3"
+        )
+    )
+
+    # ------------------------------------------------------
+    # Flatten
+    # ------------------------------------------------------
+    model.add(Flatten(name="Flatten"))
+
+    # ------------------------------------------------------
+    # Fully Connected Layers
+    # ------------------------------------------------------
+    model.add(Dense(512, activation="relu", name="Dense_512"))
+
+    model.add(Dense(128, activation="relu", name="Dense_128"))
+
+    model.add(Dense(32, activation="relu", name="Dense_32"))
+
+    # ------------------------------------------------------
+    # Output Layer
+    # ------------------------------------------------------
+    if classification == "binary":
+
+        model.add(Dense(1, activation="sigmoid", name="Output"))
+
+        loss_function = "binary_crossentropy"
+
+    else:
+
+        model.add(
+            Dense(
+                num_classes,
+                activation="softmax",
+                name="Output"
+            )
+        )
+
+        loss_function = "sparse_categorical_crossentropy"
+
+    # ------------------------------------------------------
+    # Compile
+    # ------------------------------------------------------
+    model.compile(
+        optimizer=Adam(learning_rate=LEARNING_RATE),
+        loss=loss_function,
+        metrics=["accuracy"]
+    )
+
+    return model
+    
+# ==========================================================
+# PATHS
+# ==========================================================
+
+PROJECT_ROOT = "/home/dhanush2026/dhanush2026/AI_IDS"
+
+DATASET_FILE = (
+    f"{PROJECT_ROOT}/PCC_RESULTS/"
+    f"threshold_{THRESHOLD}/reduced_dataset.csv"
+)
+
+MODEL_DIR = (
+    f"{PROJECT_ROOT}/MODELS/"
+    f"threshold_{THRESHOLD}"
+)
+
+RESULT_DIR = (
+    f"{PROJECT_ROOT}/RESULTS/"
+    f"threshold_{THRESHOLD}"
+)
+
+
+os.makedirs(MODEL_DIR, exist_ok=True)
+os.makedirs(RESULT_DIR, exist_ok=True)
+
+# ======================================================
+# RANDOM SEED
+# ======================================================
 np.random.seed(SEED)
 random.seed(SEED)
 tf.random.set_seed(SEED)
 
-# ===========================
-# CONFIGURATION
-# ===========================
-
-THRESHOLD = "0.10"
-
-CLASSIFICATION = "binary"
-# change to "multiclass" later
-
-N_SPLITS = 10
-BATCH_SIZE = 256
-EPOCHS = 50
-LEARNING_RATE = 0.001
 
 # ===========================
 # DATASET PATH
@@ -75,6 +206,16 @@ print("=" * 60)
 
 df = pd.read_csv(DATASET_FILE)
 
+print(DATASET_FILE)
+print("\nImmediately after loading:")
+print(df["Label"].head())
+
+print("\nUnique labels after loading:")
+print(df["Label"].unique()[:10])
+
+print("\nData types:")
+print(df.dtypes)
+
 print(f"Threshold : {THRESHOLD}")
 print(f"Dataset Shape : {df.shape}")
 print()
@@ -84,6 +225,8 @@ print(df.head())
 print("\nColumns\n")
 print(df.columns.tolist())
 
+print(df["Label"].value_counts())
+
 # ==========================================================
 # LABEL ENCODING
 # ==========================================================
@@ -92,36 +235,50 @@ print("\n" + "=" * 60)
 print("Label Encoding")
 print("=" * 60)
 
+# Keep original labels untouched
+y_original = df["Label"].copy()
+
 if CLASSIFICATION == "binary":
 
-    # BENIGN -> 0
-    # All attacks -> 1
-    df["Label"] = df["Label"].apply(lambda x: 0 if x == "BENIGN" else 1)
+    y = y_original.apply(lambda x: 0 if x == "BENIGN" else 1).values
 
     print("\nBinary Classification Selected")
-    print(df["Label"].value_counts())
+    print(pd.Series(y).value_counts())
 
 else:
 
     encoder = LabelEncoder()
-    df["Label"] = encoder.fit_transform(df["Label"])
+    y = encoder.fit_transform(y_original)
 
     print("\nMulti-Class Classification Selected")
     print(f"Number of Classes : {len(encoder.classes_)}")
 
-    print("\nLabel Mapping:\n")
-
     for i, label in enumerate(encoder.classes_):
-        print(f"{i:2d} --> {label}")
-        
+        print(f"{i:2d} --> {label}")        
+# ==========================================================
+# CLEAN DATASET
+# ==========================================================
+
+print("\nCleaning dataset...")
+
+# Replace Inf with NaN
+df.replace([np.inf, -np.inf], np.nan, inplace=True)
+
+# Fill NaN with 0
+df.fillna(0, inplace=True)
+
+# Verify
+assert np.isfinite(
+    df.select_dtypes(include=[np.number]).values
+).all(), "Dataset still contains NaN/Inf!"
+
+print("Cleaning Completed.")
 
 # ==========================================================
 # FEATURES & LABELS
 # ==========================================================
 
 X = df.drop(columns=["Label"])
-
-y = df["Label"]
 
 print("\nFeature Matrix Shape :", X.shape)
 print("Label Vector Shape   :", y.shape)
@@ -131,7 +288,7 @@ print("Label Vector Shape   :", y.shape)
 # ==========================================================
 
 X = X.values.astype(np.float32)
-y = y.values
+y = y
 
 print("\nNumPy Conversion Completed")
 print("X Shape :", X.shape)
@@ -151,12 +308,16 @@ print("\n10-Fold Stratified Cross Validation Initialized")
 # ==========================================================
 # 10-FOLD CROSS VALIDATION
 # ==========================================================
-
+all_results = []
 for fold, (train_idx, test_idx) in enumerate(skf.split(X, y), start=1):
 
     print("\n" + "=" * 70)
     print(f"Fold {fold}/{N_SPLITS}")
     print("=" * 70)
+
+    # ------------------------------------------------------
+    # Train-Test Split
+    # ------------------------------------------------------
 
     X_train = X[train_idx]
     X_test = X[test_idx]
@@ -166,93 +327,248 @@ for fold, (train_idx, test_idx) in enumerate(skf.split(X, y), start=1):
 
     print("Training Shape :", X_train.shape)
     print("Testing Shape  :", X_test.shape)
-
-    # Only run one fold for now
-    break
     
+    # ==========================================================
+    # CHECK TRAINING DATA
+    # ==========================================================
+    feature_names = df.drop(columns=["Label"]).columns
+    print("\nChecking training data...\n")
+    for i, feature in enumerate(feature_names):
+     col = X_train[:, i]
 
-# ==========================================================
-# FEATURE SCALING
-# ==========================================================
-print("\nChecking for Infinity values...")
+     if np.isinf(col).any() or np.isnan(col).any():
 
+        print(f"{feature}")
 
-feature_names = df.drop(columns=["Label"]).columns
+        print(" Positive Inf :", np.isposinf(col).sum())
+        print(" Negative Inf :", np.isneginf(col).sum())
+        print(" NaN :", np.isnan(col).sum())
 
-for i, col in enumerate(feature_names):
+    print("\nMaximum value in X_train :", np.nanmax(X_train))
+    print("Minimum value in X_train :", np.nanmin(X_train))
 
-    if np.isinf(X_train[:, i]).any():
+    # ------------------------------------------------------
+    # Feature Scaling
+    # ------------------------------------------------------
 
-        print(col)
+    scaler = StandardScaler()
+
+    X_train = scaler.fit_transform(X_train)
+    X_test = scaler.transform(X_test)
+
+    print("\nFeature Scaling Completed")
+    print("Training Mean :", np.mean(X_train))
+    print("Training Std  :", np.std(X_train))
+
+    # ------------------------------------------------------
+    # Reshape for CNN
+    # ------------------------------------------------------
+
+    X_train = X_train.reshape(
+        X_train.shape[0],
+        X_train.shape[1],
+        1
+    )
+
+    X_test = X_test.reshape(
+        X_test.shape[0],
+        X_test.shape[1],
+        1
+    )
+
+    print("\nReshaped Dataset")
+    print("X_train :", X_train.shape)
+    print("X_test  :", X_test.shape)
+
+    # ------------------------------------------------------
+    # Build PCC-CNN Model
+    # ------------------------------------------------------
+
+    print("\nBuilding PCC-CNN Model...")
+
+    model = build_pcc_cnn(
+        input_shape=(X_train.shape[1], 1),
+        classification=CLASSIFICATION,
+        num_classes=len(np.unique(y))
+    )
+
+    print("Model Created Successfully\n")
+
+    model.summary()
+    
+    # ==========================================================
+    # CALLBACKS
+    # ==========================================================
+    model_path = os.path.join(
+    MODEL_DIR,
+    f"fold_{fold}_best.keras"
+    )
+    
+    early_stopping = EarlyStopping(
+    monitor="val_loss",
+    patience=5,
+    restore_best_weights=True,
+    verbose=1
+    )
+    
+    model_checkpoint = ModelCheckpoint(
+    filepath=model_path,
+    monitor="val_loss",
+    save_best_only=True,
+    verbose=1
+    )
+    
+    print("\nCallbacks Initialized")
+    
+    # ==========================================================
+    # TRAIN MODEL
+    # ==========================================================
+    
+    print("\nTraining Started...\n")
+    
+    history = model.fit(
+
+    X_train,
+    y_train,
+
+    validation_data=(X_test, y_test),
+
+    epochs=EPOCHS,
+
+    batch_size=BATCH_SIZE,
+
+    callbacks=[
+        early_stopping,
+        model_checkpoint
+    ],
+
+    verbose=1
+    )
+    
+    print("\nTraining Completed.")
+    
+    # ==========================================================
+    # PREDICTION
+    # ==========================================================
+    
+    print("\nGenerating Predictions...")
+    # Probability predictions
+    y_prob = model.predict(X_test, verbose=0)
+    
+    # Binary predictions
+    if CLASSIFICATION == "binary":
+        y_pred = (y_prob > 0.5).astype(int).flatten()
+    else:
+        y_pred = np.argmax(y_prob, axis=1)
+    print("Prediction Completed.")
+    
+    print("Prediction Shape :", y_pred.shape)
+    
+    print("\ny_train distribution:")
+    print(pd.Series(y_train).value_counts())
+    
+    print("\ny_test distribution:")
+    print(pd.Series(y_test).value_counts())
+    # ==========================================================
+    # EVALUATION METRICS
+    # ==========================================================#
+    
+    accuracy = accuracy_score(y_test, y_pred)
+    
+    
+    precision = precision_score(
+    y_test,
+    y_pred,
+    zero_division=0
+    )
+    
+    recall = recall_score(
+    y_test,
+    y_pred,
+    zero_division=0
+    )
+    
+    f1 = f1_score(
+    y_test,
+    y_pred,
+    zero_division=0
+    )
+    
+    auc = roc_auc_score(
+    y_test,
+    y_prob
+    )
+    
+    print("\nEvaluation Results")
+    print("-" * 40)
+    
+    print(f"Accuracy : {accuracy:.4f}")
+    print(f"Precision: {precision:.4f}")
+    print(f"Recall   : {recall:.4f}")
+    print(f"F1 Score : {f1:.4f}")
+    print(f"ROC AUC  : {auc:.4f}")
+    
+    
+    # ==========================================================
+    # CONFUSION MATRIX
+    # ==========================================================
+    cm = confusion_matrix(
+    y_test,
+    y_pred
+    )
+    
+    TN, FP, FN, TP = cm.ravel()
+    print("\nConfusion Matrix")
+    print(cm)
+    
+    print("\nTN :", TN)
+    print("FP :", FP)
+    print("FN :", FN)
+    print("TP :", TP)
+    
+    # ==========================================================
+    # ADDITIONAL METRICS
+    # ==========================================================
+    
+    specificity = TN / (TN + FP)
+    
+    fpr = FP / (FP + TN)
+    
+    fnr = FN / (FN + TP)
+    
+    print("\nSpecificity :", round(specificity,4))
+    print("False Positive Rate :", round(fpr,4))
+    print("False Negative Rate :", round(fnr,4))
+    
+    all_results.append({
+    "Fold": fold,
+    "Accuracy": accuracy,
+    "Precision": precision,
+    "Recall": recall,
+    "F1": f1,
+    "AUC": auc,
+    "Specificity": specificity,
+    "FPR": fpr,
+    "FNR": fnr
+    })
+    # ------------------------------------------------------
+    # Debug Mode
+    # ------------------------------------------------------
+
+    if DEBUG_ONE_FOLD:
+        break
         
-print("Positive Inf :", np.isposinf(X_train).sum())
+results_df = pd.DataFrame(all_results)
 
-print("Negative Inf :", np.isneginf(X_train).sum())
-
-print("NaN :", np.isnan(X_train).sum())
-
-print("Maximum value :", np.nanmax(X_train))
-
-print("Minimum value :", np.nanmin(X_train))
-
-# ==========================================================
-# CLEAN REDUCED DATASET
-# ==========================================================
-
-print("\nCleaning Reduced Dataset...")
-
-# Replace Infinity with NaN
-df.replace([np.inf, -np.inf], np.nan, inplace=True)
-
-print("\nMissing Values Before Cleaning:")
-print(df.isnull().sum()[df.isnull().sum() > 0])
-
-# Replace NaN with 0
-df.fillna(0, inplace=True)
-
-print("\nMissing Values After Cleaning:")
-print(df.isnull().sum().sum())
-
-print("\nChecking Infinity Values...")
-print("Positive Inf :", np.isposinf(df.select_dtypes(include=[np.number])).sum().sum())
-print("Negative Inf :", np.isneginf(df.select_dtypes(include=[np.number])).sum().sum())
-
-# Save the cleaned dataset
-# df.to_csv(DATASET_FILE, index=False) 
-
-#print("\nCleaned dataset saved successfully.")
-
-scaler = StandardScaler()
-
-X_train = scaler.fit_transform(X_train)
-
-X_test = scaler.transform(X_test)
-
-print("\nFeature Scaling Completed")
-
-print("Training Mean :", np.mean(X_train))
-
-print("Training Std  :", np.std(X_train))
-
-# print(df.shape)
-
-# ==========================================================
-# RESHAPE FOR CNN
-# ==========================================================
-
-X_train = X_train.reshape(
-    X_train.shape[0],
-    X_train.shape[1],
-    1
+results_df.to_csv(
+    os.path.join(
+        RESULT_DIR,
+        "10Fold_Results.csv"
+    ),
+    index=False
 )
 
-X_test = X_test.reshape(
-    X_test.shape[0],
-    X_test.shape[1],
-    1
-)
+print(results_df)
 
-print("\nReshaped Dataset")
-
-print("X_train :", X_train.shape)
-print("X_test  :", X_test.shape)
+print("\nAverage Results")
+print(results_df.mean(numeric_only=True))
