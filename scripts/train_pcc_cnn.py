@@ -17,6 +17,7 @@ from sklearn.metrics import (
     confusion_matrix
 )
 
+
 from tensorflow.keras.models import Sequential
 from tensorflow.keras.layers import (
     Input,
@@ -363,6 +364,19 @@ for fold, (train_idx, test_idx) in enumerate(skf.split(X, y), start=1):
     X_test = scaler.transform(X_test)
 
     print("\nFeature Scaling Completed")
+    import joblib
+    # Save scaler (only once)
+    if fold == 1:
+        os.makedirs(MODEL_SAVE_PATH, exist_ok=True)
+        joblib.dump(
+        scaler,
+        os.path.join(
+                  MODEL_SAVE_PATH,
+                            "scaler.pkl"
+        )
+       )
+       print("Scaler Saved.")
+       
     print("Training Mean :", np.mean(X_train))
     print("Training Std  :", np.std(X_train))
 
@@ -450,6 +464,55 @@ for fold, (train_idx, test_idx) in enumerate(skf.split(X, y), start=1):
 
     verbose=1
     )
+    # ==========================================================
+    # SAVE TRAINING HISTORY
+    # ==========================================================
+    history_df = pd.DataFrame(history.history)
+    import matplotlib.pyplot as plt
+    plt.figure(figsize=(8,5))
+    
+    plt.plot(history.history["loss"], label="Train Loss")
+    plt.plot(history.history["val_loss"], label="Validation Loss")
+    plt.xlabel("Epoch")
+    plt.ylabel("Loss")
+    plt.legend()
+    plt.savefig(
+    os.path.join(
+        RESULT_SAVE_PATH,
+        f"loss_fold_{fold}.png"
+        )
+        
+      )
+      
+    plt.close()
+    
+    plt.figure(figsize=(8,5))
+    plt.plot(history.history["accuracy"], label="Train Accuracy")
+    plt.plot(history.history["val_accuracy"], label="Validation Accuracy")
+    plt.xlabel("Epoch")
+    plt.ylabel("Accuracy")
+    plt.legend()
+    plt.savefig(
+    os.path.join(
+        RESULT_SAVE_PATH,
+        f"accuracy_fold_{fold}.png"
+        )
+        
+       )
+       
+    plt.close()
+    
+    history_df.to_csv(
+    os.path.join(
+        RESULT_SAVE_PATH,
+
+        f"history_fold_{fold}.csv"
+        
+        ),
+    index=False
+    )
+    
+    print("Training History Saved.")
     
     print("\nTraining Completed.")
     
@@ -463,6 +526,7 @@ for fold, (train_idx, test_idx) in enumerate(skf.split(X, y), start=1):
     
     # Binary predictions
     if CLASSIFICATION == "binary":
+        y_prob = y_prob.flatten()
         y_pred = (y_prob > 0.5).astype(int).flatten()
     else:
         y_pred = np.argmax(y_prob, axis=1)
@@ -475,6 +539,34 @@ for fold, (train_idx, test_idx) in enumerate(skf.split(X, y), start=1):
     
     print("\ny_test distribution:")
     print(pd.Series(y_test).value_counts())
+    
+    
+    fpr_curve, tpr_curve, roc_thresholds = roc_curve(
+    y_test,
+    y_prob
+    )
+    
+    roc_df = pd.DataFrame({
+    "Threshold": roc_thresholds,
+
+    "FPR": fpr_curve,
+
+    "TPR": tpr_curve
+    })
+    
+    roc_df.to_csv(
+
+    os.path.join(
+
+        RESULT_SAVE_PATH,
+
+        f"roc_fold_{fold}.csv"
+
+    ),
+
+    index=False
+    )
+    
     # ==========================================================
     # EVALUATION METRICS
     # ==========================================================#
@@ -531,6 +623,35 @@ for fold, (train_idx, test_idx) in enumerate(skf.split(X, y), start=1):
     print("FP :", FP)
     print("FN :", FN)
     print("TP :", TP)
+    
+    # ==========================================================
+    # SAVE CONFUSION MATRIX
+    # ==========================================================
+    cm_df = pd.DataFrame(
+
+    cm,
+
+    index=[
+        "Actual Benign",
+        "Actual Attack"
+    ],
+
+    columns=[
+        "Predicted Benign",
+        "Predicted Attack"
+    ]
+    )
+    
+    cm_df.to_csv(
+
+    os.path.join(
+
+        RESULT_SAVE_PATH,
+
+        f"confusion_matrix_fold_{fold}.csv"
+        )
+    )
+    print("Confusion Matrix Saved.")
     
     # ==========================================================
     # ADDITIONAL METRICS
@@ -617,6 +738,47 @@ results_df.to_csv(
 
         "10Fold_Results.csv"
 
+    ),
+
+    index=False
+
+)
+summary = pd.DataFrame({
+
+    "Metric":[
+        "Accuracy",
+        "Precision",
+        "Recall",
+        "F1",
+        "AUC",
+        "Specificity"
+    ],
+
+    "Mean":[
+        results_df["Accuracy"].mean(),
+        results_df["Precision"].mean(),
+        results_df["Recall"].mean(),
+        results_df["F1 Score"].mean(),
+        results_df["AUC"].mean(),
+        results_df["Specificity"].mean()
+    ],
+
+    "Std":[
+        results_df["Accuracy"].std(),
+        results_df["Precision"].std(),
+        results_df["Recall"].std(),
+        results_df["F1 Score"].std(),
+        results_df["AUC"].std(),
+        results_df["Specificity"].std()
+    ]
+
+})
+
+summary.to_csv(
+
+    os.path.join(
+        RESULT_SAVE_PATH,
+        "experiment_summary.csv"
     ),
 
     index=False
