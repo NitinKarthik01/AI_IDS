@@ -6,6 +6,8 @@ import numpy as np
 import pandas as pd
 import tensorflow as tf
 
+from architecture import save_cnn_architecture
+
 from sklearn.model_selection import StratifiedKFold
 from sklearn.preprocessing import LabelEncoder, StandardScaler
 from sklearn.metrics import (
@@ -15,7 +17,9 @@ from sklearn.metrics import (
     f1_score,
     roc_auc_score,
     confusion_matrix,
-    roc_curve
+    roc_curve,
+    balanced_accuracy_score,
+    
 )
 
 
@@ -414,8 +418,14 @@ for fold, (train_idx, test_idx) in enumerate(skf.split(X, y), start=1):
     )
 
     print("Model Created Successfully\n")
+    
 
     model.summary()
+    
+    with open(os.path.join(RESULT_DIR, "model_summary.txt"), "w") as f:
+     model.summary(
+        print_fn=lambda x: f.write(x + "\n")
+     )
     
     # ==========================================================
     # CALLBACKS
@@ -465,6 +475,17 @@ for fold, (train_idx, test_idx) in enumerate(skf.split(X, y), start=1):
 
     verbose=1
     )
+    
+    save_cnn_architecture(
+
+    model,
+
+    RESULT_DIR
+    
+    #print(df)
+    
+    )
+
     # ==========================================================
     # SAVE TRAINING HISTORY
     # ==========================================================
@@ -574,6 +595,10 @@ for fold, (train_idx, test_idx) in enumerate(skf.split(X, y), start=1):
     
     accuracy = accuracy_score(y_test, y_pred)
     
+    balanced_acc = balanced_accuracy_score(y_test,
+    y_pred,
+    )
+    
     
     precision = precision_score(
     y_test,
@@ -593,6 +618,12 @@ for fold, (train_idx, test_idx) in enumerate(skf.split(X, y), start=1):
     zero_division=0
     )
     
+    macro_f1 = f1_score(
+    y_test,
+    y_pred,
+    average="macro"
+    )
+    
     auc = roc_auc_score(
     y_test,
     y_prob
@@ -602,9 +633,11 @@ for fold, (train_idx, test_idx) in enumerate(skf.split(X, y), start=1):
     print("-" * 40)
     
     print(f"Accuracy : {accuracy:.4f}")
+    print(f"Balanced Accuracy : {balanced_acc:.4f}")
     print(f"Precision: {precision:.4f}")
     print(f"Recall   : {recall:.4f}")
     print(f"F1 Score : {f1:.4f}")
+    print("Macro F1 : {macro_f1:.4f}")
     print(f"ROC AUC  : {auc:.4f}")
     
     
@@ -675,9 +708,11 @@ for fold, (train_idx, test_idx) in enumerate(skf.split(X, y), start=1):
     all_results.append({
     "Fold": fold,
     "Accuracy": accuracy,
+    "Balanced Accuracy":balanced_acc,
     "Precision": precision,
     "Recall": recall,
     "F1": f1,
+    "Macro F1": macro_f1,
     "AUC": auc,
     "Specificity": specificity,
     "FPR": fpr,
@@ -748,27 +783,40 @@ summary = pd.DataFrame({
 
     "Metric":[
         "Accuracy",
+        
+        "Balanced Accuracy",
+        
         "Precision",
-        "Recall",
+        
+        "Sensitivity",
+        
         "F1",
+        
+        "Macro F1",
+        
         "AUC",
+        
         "Specificity"
     ],
 
     "Mean":[
         results_df["Accuracy"].mean(),
+        results_df["Balanced Accuracy"].mean(),
         results_df["Precision"].mean(),
         results_df["Recall"].mean(),
         results_df["F1"].mean(),
+        results_df["Macro F1"].mean(),
         results_df["AUC"].mean(),
         results_df["Specificity"].mean()
     ],
 
     "Std":[
         results_df["Accuracy"].std(),
+        results_df["Balanced Accuracy"].std(),
         results_df["Precision"].std(),
         results_df["Recall"].std(),
         results_df["F1"].std(),
+        results_df["Macro F1"].std(),
         results_df["AUC"].std(),
         results_df["Specificity"].std()
     ]

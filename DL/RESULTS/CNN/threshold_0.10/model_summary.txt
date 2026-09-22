@@ -1,0 +1,25 @@
+Model: "PCC_CNN"
+_________________________________________________________________
+ Layer (type)                Output Shape              Param #   
+=================================================================
+ Conv1 (Conv1D)              (None, 15, 96)            480       
+                                                                 
+ Conv2 (Conv1D)              (None, 15, 64)            18496     
+                                                                 
+ Conv3 (Conv1D)              (None, 15, 32)            4128      
+                                                                 
+ Flatten (Flatten)           (None, 480)               0         
+                                                                 
+ Dense_512 (Dense)           (None, 512)               246272    
+                                                                 
+ Dense_128 (Dense)           (None, 128)               65664     
+                                                                 
+ Dense_32 (Dense)            (None, 32)                4128      
+                                                                 
+ Output (Dense)              (None, 1)                 33        
+                                                                 
+=================================================================
+Total params: 339,201
+Trainable params: 339,201
+Non-trainable params: 0
+_________________________________________________________________
