@@ -235,6 +235,19 @@ for train_idx, test_idx in skf.split(X, y):
     fold
     )
     
+    cm_df = pd.DataFrame(
+    cm,
+    index=["Actual Benign", "Actual Attack"],
+    columns=["Predicted Benign", "Predicted Attack"]
+    )
+    
+    cm_df.to_csv(
+    os.path.join(
+        RESULT_DIR,
+        f"confusion_matrix_fold_{fold}.csv"
+    )
+    )
+    
     
     
     TN, FP, FN, TP = cm.ravel()
