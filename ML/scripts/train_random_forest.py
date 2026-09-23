@@ -34,7 +34,8 @@ from sklearn.metrics import (
     f1_score,
     roc_auc_score,
     confusion_matrix,
-    roc_curve
+    roc_curve,
+    balanced_accuracy_score
 )
 
 warnings.filterwarnings("ignore")
@@ -207,11 +208,22 @@ for train_idx, test_idx in skf.split(X, y):
     
     accuracy = accuracy_score(y_test, y_pred)
     
+    balanced_accuracy = balanced_accuracy_score(
+    y_test,
+    y_pred
+    )
+    
     precision = precision_score(y_test, y_pred)
     
     recall = recall_score(y_test, y_pred)
     
     f1 = f1_score(y_test, y_pred)
+    
+    macro_f1 = f1_score(
+    y_test,
+    y_pred,
+    average="macro"
+    )
     
     auc = roc_auc_score(y_test, y_prob)
     
@@ -238,9 +250,11 @@ for train_idx, test_idx in skf.split(X, y):
     print("-" * 40)
     
     print("Accuracy :", accuracy)
+    print("Balanced Accuracy :",balanced_accuracy)
     print("Precision:", precision)
     print("Recall   :", recall)
     print("F1 Score :", f1)
+    print("Macro F1 :",macro_f1)
     print("ROC AUC  :", auc)
     print("\nConfusion Matrix")
     print(cm)
@@ -283,12 +297,16 @@ for train_idx, test_idx in skf.split(X, y):
     "Fold": fold,
 
     "Accuracy": accuracy,
+    
+    "Balanced Accuracy": balanced_accuracy,
 
     "Precision": precision,
 
     "Recall": recall,
 
     "F1 Score": f1,
+    
+    "Macro F1": macro_f1
 
     "AUC": auc,
 
@@ -339,12 +357,16 @@ summary = pd.DataFrame({
     "Metric": [
 
         "Accuracy",
+        
+        "Balanced Accuracy",
 
         "Precision",
 
         "Recall",
 
         "F1",
+        
+        "Macro F1",
 
         "AUC",
 
@@ -355,12 +377,16 @@ summary = pd.DataFrame({
     "Mean": [
 
         results_df["Accuracy"].mean(),
+        
+        results_df["Balanced Accuracy"].mean(),
 
         results_df["Precision"].mean(),
 
         results_df["Recall"].mean(),
 
         results_df["F1 Score"].mean(),
+        
+        results_df["Macro F1"].mean(),
 
         results_df["AUC"].mean(),
 
@@ -371,12 +397,16 @@ summary = pd.DataFrame({
     "Std": [
 
         results_df["Accuracy"].std(),
+        
+        results_df["Balanced Accuracy"].std(),
 
         results_df["Precision"].std(),
 
         results_df["Recall"].std(),
 
         results_df["F1 Score"].std(),
+        
+        results_df["Macro F1"].std(),
 
         results_df["AUC"].std(),
 

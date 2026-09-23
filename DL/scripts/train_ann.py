@@ -15,7 +15,8 @@ from sklearn.metrics import (
     f1_score,
     roc_auc_score,
     confusion_matrix,
-    roc_curve
+    roc_curve,
+    balanced_accuracy_score
 )
 
 
@@ -577,13 +578,23 @@ for fold, (train_idx, test_idx) in enumerate(skf.split(X, y), start=1):
     y_prob
     )
     
+    balanced_accuracy = balanced_accuracy_score(y_test, y_pred)
+    
+    macro_f1 = f1_score(
+    y_test,
+    y_pred,
+    average="macro"
+    )
+    
     print("\nEvaluation Results")
     print("-" * 40)
     
     print(f"Accuracy : {accuracy:.4f}")
+    print(f"Balanced Accuracy : {balanced_accuracy:.4f}")
     print(f"Precision: {precision:.4f}")
     print(f"Recall   : {recall:.4f}")
     print(f"F1 Score : {f1:.4f}")
+    print(f"Macro F1: {macro_f1:.4f}")
     print(f"ROC AUC  : {auc:.4f}")
     
     
@@ -654,9 +665,11 @@ for fold, (train_idx, test_idx) in enumerate(skf.split(X, y), start=1):
     all_results.append({
     "Fold": fold,
     "Accuracy": accuracy,
+    "Balanced Accuracy":balanced_accuracy,
     "Precision": precision,
     "Recall": recall,
     "F1": f1,
+    "Macro F1":macro_f1,
     "AUC": auc,
     "Specificity": specificity,
     "FPR": fpr,
@@ -727,27 +740,33 @@ summary = pd.DataFrame({
 
     "Metric":[
         "Accuracy",
+        "Balanced Accuracy",
         "Precision",
         "Recall",
         "F1",
+        "Macro F1",
         "AUC",
         "Specificity"
     ],
 
     "Mean":[
         results_df["Accuracy"].mean(),
+        results_df["Balanced Accuracy"].mean(),
         results_df["Precision"].mean(),
         results_df["Recall"].mean(),
         results_df["F1"].mean(),
+        results_df["Macro F1"].mean(),
         results_df["AUC"].mean(),
         results_df["Specificity"].mean()
     ],
 
     "Std":[
         results_df["Accuracy"].std(),
+        results_df["Balanced Accuracy"].std(),
         results_df["Precision"].std(),
         results_df["Recall"].std(),
         results_df["F1"].std(),
+        results_df["Macro F1"].std(),
         results_df["AUC"].std(),
         results_df["Specificity"].std()
     ]
