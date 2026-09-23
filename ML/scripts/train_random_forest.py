@@ -306,7 +306,7 @@ for train_idx, test_idx in skf.split(X, y):
 
     "F1 Score": f1,
     
-    "Macro F1": macro_f1
+    "Macro F1": macro_f1,
 
     "AUC": auc,
 
