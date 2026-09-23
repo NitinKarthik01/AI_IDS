@@ -10,7 +10,7 @@ import matplotlib.pyplot as plt
 
 PROJECT_ROOT = r"C:\Dhanush\D\MSIS\Mini Project\DL"
 
-MODEL_NAME = "CNN"
+MODEL_NAME = "ANN"
 
 THRESHOLD = "0.10"
 
