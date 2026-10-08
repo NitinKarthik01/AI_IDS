@@ -19,7 +19,7 @@ PROJECT_ROOT = r"C:\Dhanush\D\MSIS\Mini Project\ML"
 RESULT_PATH = os.path.join(
     PROJECT_ROOT,
     "RESULTS",
-    "RandomForest",          
+    "DecisionTree",          
     "threshold_0.10"
 )
 
@@ -279,5 +279,5 @@ plt.savefig(
 plt.close()
 
 print("="*60)
-print("Random Forest plots generated successfully.")
+print("Decision Tree plots generated successfully.")
 print("="*60)
