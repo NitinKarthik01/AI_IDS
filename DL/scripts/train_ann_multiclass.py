@@ -162,12 +162,12 @@ DATASET_FILE = (
 )
 
 MODEL_DIR = (
-    f"{PROJECT_ROOT}/DL/MODELS/ANN/"
+    f"{PROJECT_ROOT}/DL/MODELS/ANN_MULTICLASS/"
     f"threshold_{THRESHOLD}"
 )
 
 RESULT_DIR = (
-    f"{PROJECT_ROOT}/DL/RESULTS/ANN/"
+    f"{PROJECT_ROOT}/DL/RESULTS/ANN_MULTICLASS/"
     f"threshold_{THRESHOLD}"
 )
 
@@ -195,15 +195,18 @@ DATASET_FILE = (
 # ===========================
 # LOAD DATASET
 # ===========================
-
 print("=" * 60)
 print("Loading Reduced Dataset...")
 print("=" * 60)
 
 df = pd.read_csv(DATASET_FILE)
 
-print("Original Classes:")
+print("Original Class Distribution:")
 print(df["Label"].value_counts())
+
+# ==========================================================
+# LABEL ENCODING
+# ==========================================================
 
 label_encoder = LabelEncoder()
 
@@ -211,8 +214,7 @@ df["Label"] = label_encoder.fit_transform(df["Label"])
 
 num_classes = len(label_encoder.classes_)
 
-print("Number of Classes:", num_classes)
-
+# Save label mapping
 mapping = pd.DataFrame({
     "Original_Label": label_encoder.classes_,
     "Encoded_Label": range(num_classes)
@@ -226,35 +228,15 @@ mapping.to_csv(
     index=False
 )
 
-# ==========================================================
-# LABEL ENCODING
-# ==========================================================
+print(f"\nNumber of Classes : {num_classes}")
 
+print("\nLabel Mapping:")
+for i, label in enumerate(label_encoder.classes_):
+    print(f"{i:2d} --> {label}")
 
-print("\n" + "=" * 60)
-print("Label Encoding")
-print("=" * 60)
-
-# Keep original labels untouched
-y_original = df["Label"].copy()
-
-if CLASSIFICATION == "binary":
-
-    y = y_original.apply(lambda x: 0 if x == "BENIGN" else 1).values
-
-    print("\nBinary Classification Selected")
-    print(pd.Series(y).value_counts())
-
-else:
-
-    encoder = LabelEncoder()
-    y = encoder.fit_transform(y_original)
-
-    print("\nMulti-Class Classification Selected")
-    print(f"Number of Classes : {len(encoder.classes_)}")
-
-    for i, label in enumerate(encoder.classes_):
-        print(f"{i:2d} --> {label}")        
+# Features and Labels
+X = df.drop(columns=["Label"]).values
+y = df["Label"].values
 # ==========================================================
 # CLEAN DATASET
 # ==========================================================
@@ -394,7 +376,7 @@ for fold, (train_idx, test_idx) in enumerate(skf.split(X, y), start=1):
     model = build_pcc_ann(
         input_shape=X_train.shape[1],
         classification=CLASSIFICATION,
-        num_classes=34
+        num_classes=num_classes
     )
 
     print("Model Created Successfully\n")
@@ -429,6 +411,20 @@ for fold, (train_idx, test_idx) in enumerate(skf.split(X, y), start=1):
     # TRAIN MODEL
     # ==========================================================
     
+    
+    from sklearn.utils.class_weight import compute_class_weight
+    
+    classes = np.unique(y_train)
+    weights = compute_class_weight(
+    class_weight="balanced",
+    classes=classes,
+    y=y_train
+    )
+    
+    class_weights = dict(zip(classes, weights))
+    
+    print(class_weights)
+    
     print("\nTraining Started...\n")
     
     history = model.fit(
@@ -441,6 +437,8 @@ for fold, (train_idx, test_idx) in enumerate(skf.split(X, y), start=1):
     epochs=EPOCHS,
 
     batch_size=BATCH_SIZE,
+    
+    class_weight=class_weights,
 
     callbacks=[
         early_stopping,
@@ -525,10 +523,10 @@ for fold, (train_idx, test_idx) in enumerate(skf.split(X, y), start=1):
     print(pd.Series(y_test).value_counts())
     
     
-    fpr_curve, tpr_curve, roc_thresholds = roc_curve(
-    y_test,
-    y_prob
-    )
+    #fpr_curve, tpr_curve, roc_thresholds = roc_curve(
+    #y_test,
+    #y_prob
+    #)
     
     # roc_df = pd.DataFrame({
     # "Threshold": roc_thresholds,
@@ -584,13 +582,16 @@ for fold, (train_idx, test_idx) in enumerate(skf.split(X, y), start=1):
     )
 
     macro_f1 = f1
-
-    auc = roc_auc_score(
-        y_test,
-        y_prob,
-        multi_class="ovr",
-        average="macro"
-    )
+    
+    print("Unique classes in y_test:", len(np.unique(y_test)))
+    print("Probability shape:", y_prob.shape)
+   # auc = roc_auc_score(
+    #    y_test,
+     #   y_prob,
+      #  multi_class="ovr",
+       # average="macro",
+        #labels=np.arange(num_classes)
+    #)
 
     print("\nEvaluation Results")
     print("-"*40)
@@ -600,7 +601,7 @@ for fold, (train_idx, test_idx) in enumerate(skf.split(X, y), start=1):
     print(f"Macro Precision     : {precision:.4f}")
     print(f"Macro Recall        : {recall:.4f}")
     print(f"Macro F1            : {macro_f1:.4f}")
-    print(f"Macro ROC AUC       : {auc:.4f}")
+    #print(f"Macro ROC AUC       : {auc:.4f}")
     
     
     # ==========================================================
@@ -608,7 +609,8 @@ for fold, (train_idx, test_idx) in enumerate(skf.split(X, y), start=1):
     # ==========================================================
     cm = confusion_matrix(
     y_test,
-    y_pred
+    y_pred,
+    labels=np.arange(num_classes)
     )
     
     print("\nConfusion Matrix")
@@ -656,7 +658,7 @@ for fold, (train_idx, test_idx) in enumerate(skf.split(X, y), start=1):
 
     "Macro F1": macro_f1,
 
-    "Macro ROC AUC": auc
+    #"Macro ROC AUC": auc
 
     })
     
@@ -673,7 +675,7 @@ for fold, (train_idx, test_idx) in enumerate(skf.split(X, y), start=1):
 
             MODEL_DIR,
 
-            "best_ann_model.keras"
+            "best_ann_multiclass_model.keras"
 
         )
 
@@ -691,6 +693,8 @@ for fold, (train_idx, test_idx) in enumerate(skf.split(X, y), start=1):
 # ==========================================================
 
 results_df = pd.DataFrame(all_results)
+
+print(results_df.head())
 
 print("\n")
 print("=" * 60)
@@ -725,34 +729,40 @@ summary = pd.DataFrame({
     "Metric":[
         "Accuracy",
         "Balanced Accuracy",
-        "Precision",
-        "Recall",
-        "F1",
+        "Macro Precision",
+        "Macro Recall",
         "Macro F1",
-        "AUC",
-        "Specificity"
+       # "Macro ROC AUC"
     ],
 
     "Mean":[
+
         results_df["Accuracy"].mean(),
+
         results_df["Balanced Accuracy"].mean(),
-        results_df["Precision"].mean(),
-        results_df["Recall"].mean(),
-        results_df["F1"].mean(),
+
+        results_df["Macro Precision"].mean(),
+
+        results_df["Macro Recall"].mean(),
+
         results_df["Macro F1"].mean(),
-        results_df["AUC"].mean(),
-        results_df["Specificity"].mean()
+
+     #   results_df["Macro ROC AUC"].mean()
+
     ],
 
     "Std":[
         results_df["Accuracy"].std(),
+
         results_df["Balanced Accuracy"].std(),
-        results_df["Precision"].std(),
-        results_df["Recall"].std(),
-        results_df["F1"].std(),
+
+        results_df["Macro Precision"].std(),
+
+        results_df["Macro Recall"].std(),
+
         results_df["Macro F1"].std(),
-        results_df["AUC"].std(),
-        results_df["Specificity"].std()
+
+      #  results_df["Macro ROC AUC"].std()
     ]
 
 })
