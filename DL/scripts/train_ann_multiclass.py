@@ -530,75 +530,77 @@ for fold, (train_idx, test_idx) in enumerate(skf.split(X, y), start=1):
     y_prob
     )
     
-    roc_df = pd.DataFrame({
-    "Threshold": roc_thresholds,
+    # roc_df = pd.DataFrame({
+    # "Threshold": roc_thresholds,
 
-    "FPR": fpr_curve,
+    # "FPR": fpr_curve,
 
-    "TPR": tpr_curve
-    })
+    # "TPR": tpr_curve
+    # })
     
-    roc_df.to_csv(
+    # roc_df.to_csv(
 
-    os.path.join(
+    # os.path.join(
 
-        RESULT_DIR,
+    #     RESULT_DIR,
 
-        f"roc_fold_{fold}.csv"
+    #     f"roc_fold_{fold}.csv"
 
-    ),
+    # ),
 
-    index=False
-    )
+    # index=False
+    # )
     
     # ==========================================================
     # EVALUATION METRICS
     # ==========================================================#
     
     accuracy = accuracy_score(y_test, y_pred)
-    
-    
+
+    balanced_accuracy = balanced_accuracy_score(
+    y_test,
+    y_pred
+    )
+
     precision = precision_score(
     y_test,
     y_pred,
+    average="macro",
     zero_division=0
     )
-    
+
     recall = recall_score(
-    y_test,
-    y_pred,
-    zero_division=0
+        y_test,
+        y_pred,
+        average="macro",
+        zero_division=0
     )
-    
+
     f1 = f1_score(
-    y_test,
-    y_pred,
-    zero_division=0
+        y_test,
+        y_pred,
+        average="macro",
+        zero_division=0
     )
-    
+
+    macro_f1 = f1
+
     auc = roc_auc_score(
-    y_test,
-    y_prob
+        y_test,
+        y_prob,
+        multi_class="ovr",
+        average="macro"
     )
-    
-    balanced_accuracy = balanced_accuracy_score(y_test, y_pred)
-    
-    macro_f1 = f1_score(
-    y_test,
-    y_pred,
-    average="macro"
-    )
-    
+
     print("\nEvaluation Results")
-    print("-" * 40)
-    
-    print(f"Accuracy : {accuracy:.4f}")
-    print(f"Balanced Accuracy : {balanced_accuracy:.4f}")
-    print(f"Precision: {precision:.4f}")
-    print(f"Recall   : {recall:.4f}")
-    print(f"F1 Score : {f1:.4f}")
-    print(f"Macro F1: {macro_f1:.4f}")
-    print(f"ROC AUC  : {auc:.4f}")
+    print("-"*40)
+
+    print(f"Accuracy            : {accuracy:.4f}")
+    print(f"Balanced Accuracy   : {balanced_accuracy:.4f}")
+    print(f"Macro Precision     : {precision:.4f}")
+    print(f"Macro Recall        : {recall:.4f}")
+    print(f"Macro F1            : {macro_f1:.4f}")
+    print(f"Macro ROC AUC       : {auc:.4f}")
     
     
     # ==========================================================
@@ -609,31 +611,17 @@ for fold, (train_idx, test_idx) in enumerate(skf.split(X, y), start=1):
     y_pred
     )
     
-    TN, FP, FN, TP = cm.ravel()
     print("\nConfusion Matrix")
     print(cm)
     
-    print("\nTN :", TN)
-    print("FP :", FP)
-    print("FN :", FN)
-    print("TP :", TP)
     
     # ==========================================================
     # SAVE CONFUSION MATRIX
     # ==========================================================
     cm_df = pd.DataFrame(
-
     cm,
-
-    index=[
-        "Actual Benign",
-        "Actual Attack"
-    ],
-
-    columns=[
-        "Predicted Benign",
-        "Predicted Attack"
-    ]
+    index=label_encoder.classes_,
+    columns=label_encoder.classes_
     )
     
     cm_df.to_csv(
@@ -647,36 +635,29 @@ for fold, (train_idx, test_idx) in enumerate(skf.split(X, y), start=1):
     )
     print("Confusion Matrix Saved.")
     
-    # ==========================================================
-    # ADDITIONAL METRICS
-    # ==========================================================
-    
-    specificity = TN / (TN + FP)
-    
-    fpr = FP / (FP + TN)
-    
-    fnr = FN / (FN + TP)
     
     # ==========================================================
     # STORE CURRENT FOLD RESULTS
     # ==========================================================
     
-    print("\nSpecificity :", round(specificity,4))
-    print("False Positive Rate :", round(fpr,4))
-    print("False Negative Rate :", round(fnr,4))
+    # print("\nSpecificity :", round(specificity,4))
+    # print("False Positive Rate :", round(fpr,4))
+    # print("False Negative Rate :", round(fnr,4))
     
     all_results.append({
-    "Fold": fold,
+
     "Accuracy": accuracy,
-    "Balanced Accuracy":balanced_accuracy,
-    "Precision": precision,
-    "Recall": recall,
-    "F1": f1,
-    "Macro F1":macro_f1,
-    "AUC": auc,
-    "Specificity": specificity,
-    "FPR": fpr,
-    "FNR": fnr
+
+    "Balanced Accuracy": balanced_accuracy,
+
+    "Macro Precision": precision,
+
+    "Macro Recall": recall,
+
+    "Macro F1": macro_f1,
+
+    "Macro ROC AUC": auc
+
     })
     
     # ==========================================================
