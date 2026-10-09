@@ -8,9 +8,9 @@ from sklearn.metrics import ConfusionMatrixDisplay
 
 # ==========================================================
 
-PROJECT_ROOT = r"C:\Dhanush\D\MSIS\Mini Project\DL"
+PROJECT_ROOT = "/home/dhanush2026/dhanush2026/AI_IDS/DL"
 
-MODEL_NAME = "ANN"
+MODEL_NAME = "CNN_MULTICLASS"
 # PROJECT_ROOT = r"C:\Dhanush\D\MSIS\Mini Project\ML"
 
 # MODEL_NAME = "RandomForest"
@@ -33,72 +33,6 @@ REPORT_PATH = os.path.join(
 
 os.makedirs(REPORT_PATH, exist_ok=True)
 
-# ==========================================================
-# ROC
-# ==========================================================
-
-roc_files = sorted(
-    glob.glob(
-        os.path.join(
-            RESULT_PATH,
-            "roc_fold_*.csv"
-        )
-    )
-)
-
-mean_fpr = np.linspace(0,1,200)
-
-tprs = []
-
-for file in roc_files:
-
-    roc = pd.read_csv(file)
-
-    interp = np.interp(
-        mean_fpr,
-        roc["FPR"],
-        roc["TPR"]
-    )
-
-    interp[0] = 0
-
-    tprs.append(interp)
-
-mean_tpr = np.mean(tprs, axis=0)
-
-mean_tpr[-1] = 1
-
-plt.figure(figsize=(6,6))
-
-plt.plot(
-    mean_fpr,
-    mean_tpr,
-    linewidth=2,
-    label="Average ROC"
-)
-
-plt.plot(
-    [0,1],
-    [0,1],
-    "--"
-)
-
-plt.xlabel("False Positive Rate")
-plt.ylabel("True Positive Rate")
-plt.title("Average ROC Curve")
-plt.legend()
-
-plt.tight_layout()
-
-plt.savefig(
-    os.path.join(
-        REPORT_PATH,
-        "Average_ROC.png"
-    ),
-    dpi=300
-)
-
-plt.close()
 
 # ==========================================================
 # CONFUSION MATRIX
@@ -113,24 +47,52 @@ cm_files = sorted(
     )
 )
 
-cm_sum = np.zeros((2,2))
+# Read first matrix to determine size
+first_cm = pd.read_csv(cm_files[0], index_col=0)
+num_classes = first_cm.shape[0]
+
+cm_sum = np.zeros((num_classes, num_classes))
 
 for file in cm_files:
 
-    cm = pd.read_csv(file)
-    # Remove the first (text) column
-    cm = cm.iloc[:, 1:].to_numpy(dtype=float)
+    cm = pd.read_csv(
+        file,
+        index_col=0
+    ).to_numpy(dtype=float)
 
-cm_sum += cm
+    cm_sum += cm
 
 cm_avg = cm_sum / len(cm_files)
+# ==========================================================
+# LOAD LABELS
+# ==========================================================
+
+label_map = pd.read_csv(
+    os.path.join(
+        RESULT_PATH,
+        "label_mapping.csv"
+    )
+)
+
+class_names = label_map["Original_Label"].tolist()
+
+# ==========================================================
+# PLOT CONFUSION MATRIX
+# ==========================================================
+
+fig, ax = plt.subplots(figsize=(18, 18))
 
 disp = ConfusionMatrixDisplay(
     confusion_matrix=cm_avg,
-    display_labels=["Normal","Attack"]
+    display_labels=class_names
 )
 
-disp.plot(values_format=".1f")
+disp.plot(
+    ax=ax,
+    values_format=".0f",
+    xticks_rotation=90,
+    colorbar=False
+)
 
 plt.title("Average Confusion Matrix")
 
@@ -147,4 +109,3 @@ plt.savefig(
 plt.close()
 
 print("Evaluation Plots Generated Successfully.")
-
