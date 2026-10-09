@@ -6,6 +6,9 @@ import numpy as np
 import pandas as pd
 import tensorflow as tf
 
+
+from architecture import save_model_architecture
+
 from sklearn.model_selection import StratifiedKFold
 from sklearn.preprocessing import LabelEncoder, StandardScaler
 from sklearn.metrics import (
@@ -149,7 +152,7 @@ def build_pcc_ann(input_shape, classification="binary", num_classes=None):
     )
 
     return model
-    
+
 # ==========================================================
 # PATHS
 # ==========================================================
@@ -175,6 +178,48 @@ RESULT_DIR = (
 os.makedirs(MODEL_DIR, exist_ok=True)
 os.makedirs(RESULT_DIR, exist_ok=True)
 
+# ==========================================================
+# SAVE HYPERPARAMETERS
+# ==========================================================
+
+hyperparameters = pd.DataFrame({
+
+    "Parameter":[
+        "Epochs",
+        "Batch Size",
+        "Learning Rate",
+        "Optimizer",
+        "Loss Function",
+        "Hidden Layers",
+        "Activation",
+        "Dropout",
+        "Cross Validation",
+        "Early Stopping",
+        "Class Weights"
+    ],
+
+    "Value":[
+        EPOCHS,
+        BATCH_SIZE,
+        LEARNING_RATE,
+        "Adam",
+        "Sparse Categorical Crossentropy",
+        "512 -> 128 -> 32",
+        "ReLU + Softmax",
+        "0.30",
+        f"{N_SPLITS}-Fold Stratified",
+        "10",
+        "Balanced"
+    ]
+
+})
+
+hyperparameters.to_csv(
+    os.path.join(RESULT_DIR, "hyperparameters.csv"),
+    index=False
+)
+
+print("Hyperparameters Saved.")
 # ======================================================
 # RANDOM SEED
 # ======================================================
@@ -378,7 +423,13 @@ for fold, (train_idx, test_idx) in enumerate(skf.split(X, y), start=1):
         classification=CLASSIFICATION,
         num_classes=num_classes
     )
-
+    
+    save_model_architecture(
+    model,
+    RESULT_DIR,
+    "ann_multiclass"
+    )
+    
     print("Model Created Successfully\n")
 
     model.summary()
@@ -647,6 +698,8 @@ for fold, (train_idx, test_idx) in enumerate(skf.split(X, y), start=1):
     # print("False Negative Rate :", round(fnr,4))
     
     all_results.append({
+    
+    "Fold": fold,
 
     "Accuracy": accuracy,
 

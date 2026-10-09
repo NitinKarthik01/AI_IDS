@@ -6,9 +6,9 @@ import matplotlib.pyplot as plt
 # CHANGE ONLY THESE
 # ======================================================
 
-PROJECT_ROOT = r"C:\Dhanush\D\MSIS\Mini Project\DL"
+PROJECT_ROOT = "/home/dhanush2026/dhanush2026/AI_IDS/DL"
 
-MODEL_NAME = "ANN"
+MODEL_NAME = "CNN_MULTICLASS"
 
 # PROJECT_ROOT = r"C:\Dhanush\D\MSIS\Mini Project\ML"
 
@@ -34,21 +34,20 @@ os.makedirs(REPORT_PATH, exist_ok=True)
 
 # ======================================================
 
-if MODEL_NAME == "CNN":
-    arch_file = "cnn_architecture.csv"
+if MODEL_NAME == "CNN_MULTICLASS":
+    arch_file = "cnn_multiclass_architecture.csv"
 else:
-    arch_file = "ann_architecture.csv"
+    arch_file = "ann_multiclass_architecture.csv"
 
 FILES = {
 
-    "Hyperparameters":"hyperparameters.csv",
+     "Hyperparameters": "hyperparameters.csv",
 
-    "Architecture":arch_file,
+    "Architecture": arch_file,
 
-    "Experiment Summary":"experiment_summary.csv"
-    # "Hyperparameters":"hyperparameters.csv",
+    "10-Fold Results": "10Fold_Results.csv",
 
-    # "Experiment Summary":"experiment_summary.csv"
+    "Experiment Summary": "experiment_summary.csv"
 
 }
 

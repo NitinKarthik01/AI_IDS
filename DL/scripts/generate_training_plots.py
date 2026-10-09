@@ -8,9 +8,9 @@ import matplotlib.pyplot as plt
 # CHANGE ONLY THESE
 # ==========================================================
 
-PROJECT_ROOT = r"C:\Dhanush\D\MSIS\Mini Project\DL"
+PROJECT_ROOT = "/home/dhanush2026/dhanush2026/AI_IDS/DL"
 
-MODEL_NAME = "ANN"
+MODEL_NAME = "CNN_MULTICLASS"
 
 THRESHOLD = "0.10"
 
@@ -177,8 +177,8 @@ results = pd.read_csv(
 plt.figure(figsize=(8,5))
 
 plt.plot(
-    results["Fold"],
-    results["Accuracy"],
+    results["Fold"].values,
+    results["Accuracy"].values,
     marker="o",
     linewidth=2
 )
@@ -207,12 +207,9 @@ plt.close()
 metrics = [
     "Accuracy",
     "Balanced Accuracy",
-    "Precision",
-    "Recall",
-    "F1",
-    "Macro F1",
-    "AUC",
-    "Specificity"
+    "Macro Precision",
+    "Macro Recall",
+    "Macro F1"
 ]
 
 plt.figure(figsize=(11,6))
