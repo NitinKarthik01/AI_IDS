@@ -14,12 +14,12 @@ from sklearn.metrics import (
 # PATHS
 # ==========================================================
 
-PROJECT_ROOT = r"C:\Dhanush\D\MSIS\Mini Project\ML"
+PROJECT_ROOT = "/home/dhanush2026/dhanush2026/AI_IDS/ML"
 
 RESULT_PATH = os.path.join(
     PROJECT_ROOT,
     "RESULTS",
-    "DecisionTree",          
+    "DecisionTree_MULTICLASS",          
     "threshold_0.10"
 )
 
@@ -48,8 +48,8 @@ results = pd.read_csv(
 plt.figure(figsize=(8,5))
 
 plt.plot(
-    results["Fold"],
-    results["Accuracy"],
+    results["Fold"].to_numpy(),
+    results["Accuracy"].to_numpy(),
     marker="o",
     linewidth=2
 )
@@ -139,91 +139,7 @@ plt.savefig(
 
 plt.close()
 
-# ==========================================================
-# AVERAGE ROC
-# ==========================================================
 
-roc_files = sorted(
-    glob.glob(
-        os.path.join(
-            RESULT_PATH,
-            "roc_fold_*.csv"
-        )
-    )
-)
-
-mean_fpr = np.linspace(0,1,100)
-
-tprs = []
-
-aucs = []
-
-plt.figure(figsize=(6,6))
-
-for file in roc_files:
-
-    roc = pd.read_csv(file)
-
-    interp = np.interp(
-        mean_fpr,
-        roc["FPR"],
-        roc["TPR"]
-    )
-
-    interp[0]=0
-
-    tprs.append(interp)
-
-    aucs.append(
-        auc(
-            roc["FPR"],
-            roc["TPR"]
-        )
-    )
-
-mean_tpr = np.mean(
-    tprs,
-    axis=0
-)
-
-mean_tpr[-1]=1
-
-mean_auc = auc(
-    mean_fpr,
-    mean_tpr
-)
-
-plt.plot(
-    mean_fpr,
-    mean_tpr,
-    label=f"AUC = {mean_auc:.4f}"
-)
-
-plt.plot(
-    [0,1],
-    [0,1],
-    "--"
-)
-
-plt.xlabel("False Positive Rate")
-
-plt.ylabel("True Positive Rate")
-
-plt.title("Average ROC Curve")
-
-plt.legend()
-
-plt.tight_layout()
-
-plt.savefig(
-    os.path.join(
-        REPORT_PATH,
-        "Average_ROC.png"
-    ),
-    dpi=300
-)
-
-plt.close()
 
 # ==========================================================
 # AVERAGE CONFUSION MATRIX
@@ -238,21 +154,28 @@ cm_files = sorted(
     )
 )
 
-cm_sum = np.zeros((2,2),dtype=float)
+first_cm = pd.read_csv(cm_files[0], index_col=0)
+
+num_classes = first_cm.shape[0]
+
+cm_sum = np.zeros((num_classes, num_classes))
 
 for file in cm_files:
 
-    cm = pd.read_csv(file)
-
-    cm = cm.iloc[:,1:].to_numpy(dtype=float)
+    cm = pd.read_csv(
+    file,
+    index_col=0
+    ).to_numpy(dtype=float)
 
     cm_sum += cm
 
 cm_avg = cm_sum / len(cm_files)
 
+labels = first_cm.index.tolist()
+
 disp = ConfusionMatrixDisplay(
     confusion_matrix=cm_avg,
-    display_labels=["Benign","Attack"]
+    display_labels=labels
 )
 
 fig, ax = plt.subplots(figsize=(6,6))
