@@ -22,7 +22,7 @@ SAVE_PATH = os.path.join(
     PROJECT_ROOT,
     "DL",
     "RESULTS",
-    "CNN",
+    "ANN_MULTICLASS",
     "threshold_0.10",
     "REPORT"
 )
@@ -58,15 +58,13 @@ X = df.drop(columns=["Label"])
 
 y = df["Label"]
 
-# ----------------------------------------------------------
-# CONVERT TO BINARY LABELS
-# ----------------------------------------------------------
+from sklearn.preprocessing import LabelEncoder
 
-# Everything except Benign is considered Attack
+encoder = LabelEncoder()
 
-y = y.apply(
-    lambda x: 0 if str(x).lower() == "benign" else 1
-)
+y = encoder.fit_transform(y)
+
+
 
 # ==========================================================
 # FEATURE SCALING
@@ -106,21 +104,17 @@ scatter = plt.scatter(
     X_tsne[:,0],
     X_tsne[:,1],
     c=y,
-    cmap="coolwarm",
+    cmap="tab20",
     s=6,
     alpha=0.7
 )
 
 cbar = plt.colorbar(scatter)
 
-cbar.set_ticks([0,1])
+cbar.set_label("Encoded Class")
 
-cbar.set_ticklabels([
-    "Benign",
-    "Attack"
-])
 
-plt.title("t-SNE Visualization of Binary Intrusion Dataset")
+plt.title("t-SNE Visualization of Reduced Intrusion Dataset")
 
 plt.xlabel("t-SNE Component 1")
 
