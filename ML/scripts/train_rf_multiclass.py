@@ -592,6 +592,18 @@ for train_idx, test_idx in skf.split(X, y):
 # SAVE FINAL MODEL
 # ==========================================================
 
+print("="*60)
+print("MODEL INFORMATION")
+print("="*60)
+
+print("Number of Trees:", len(model.estimators_))
+
+node_counts = [tree.tree_.node_count for tree in model.estimators_]
+
+print("Average Nodes :", np.mean(node_counts))
+print("Maximum Nodes :", np.max(node_counts))
+print("Minimum Nodes :", np.min(node_counts))
+
 joblib.dump(
     model,
     os.path.join(
