@@ -7,3 +7,9 @@ Data sets/
 AI_IDS/
 DL/MODELS/
 ML/MODELS/
+ML/MODELS/
+*.joblib
+*.keras
+*.h5
+*.pkl
+
