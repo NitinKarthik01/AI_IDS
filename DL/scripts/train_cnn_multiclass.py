@@ -26,14 +26,17 @@ from sklearn.metrics import (
 from tensorflow.keras.models import Sequential
 from tensorflow.keras.layers import (
     Input,
+    Dropout,
     Conv1D,
     Flatten,
-    Dense
+    Dense,
+    BatchNormalization
 )
 from tensorflow.keras.optimizers import Adam
 from tensorflow.keras.callbacks import (
     EarlyStopping,
-    ModelCheckpoint
+    ModelCheckpoint,
+    ReduceLROnPlateau
 )
 
 warnings.filterwarnings("ignore")
@@ -46,7 +49,7 @@ SEED = 42
 
 CLASSIFICATION = "multiclass"
 
-THRESHOLD = "0.10"
+THRESHOLD = "0.90"
 
 N_SPLITS = 10
 
@@ -85,6 +88,7 @@ def build_pcc_cnn(input_shape, classification="binary", num_classes=None):
             name="Conv1"
         )
     )
+    #model.add(BatchNormalization())
 
     # ------------------------------------------------------
     # Convolution Block 2
@@ -99,6 +103,8 @@ def build_pcc_cnn(input_shape, classification="binary", num_classes=None):
             name="Conv2"
         )
     )
+    
+   # model.add(BatchNormalization())
 
     # ------------------------------------------------------
     # Convolution Block 3
@@ -122,9 +128,17 @@ def build_pcc_cnn(input_shape, classification="binary", num_classes=None):
     # ------------------------------------------------------
     # Fully Connected Layers
     # ------------------------------------------------------
-    model.add(Dense(512, activation="relu", name="Dense_512"))
+    model.add(Dense(512, activation="relu", name="Dense_512") 
+    )
+    #model.add(BatchNormalization())
+    
+    #model.add(Dropout(0.3))
 
-    model.add(Dense(128, activation="relu", name="Dense_128"))
+    model.add(Dense(128, activation="relu", name="Dense_128")
+    )
+    #model.add(BatchNormalization())
+    
+   # model.add(Dropout(0.3))
 
     model.add(Dense(32, activation="relu", name="Dense_32"))
 
@@ -167,8 +181,10 @@ def build_pcc_cnn(input_shape, classification="binary", num_classes=None):
 PROJECT_ROOT = "/home/dhanush2026/dhanush2026/AI_IDS"
 
 DATASET_FILE = (
-    f"{PROJECT_ROOT}/PCC_RESULTS/"
-    f"threshold_{THRESHOLD}/reduced_dataset.csv"
+    #f"{PROJECT_ROOT}/PCC_RESULTS/"
+    #f"threshold_{THRESHOLD}/reduced_dataset.csv"
+    f"{PROJECT_ROOT}/DATASETS/"
+    f"MERGED_CSV_PCC_Selected.csv"
 )
 
 MODEL_DIR = (
@@ -240,8 +256,10 @@ tf.random.set_seed(SEED)
 # ===========================
 
 DATASET_FILE = (
-    f"/home/dhanush2026/dhanush2026/AI_IDS/"
-    f"PCC_RESULTS/threshold_{THRESHOLD}/reduced_dataset.csv"
+    #f"/home/dhanush2026/dhanush2026/AI_IDS/"
+    #f"PCC_RESULTS/threshold_{THRESHOLD}/reduced_dataset.csv"
+    f"{PROJECT_ROOT}/DATASETS/"
+    f"MERGED_CSV_PCC_Selected.csv"
 )
 
 # ===========================
@@ -471,6 +489,14 @@ for fold, (train_idx, test_idx) in enumerate(skf.split(X, y), start=1):
     verbose=1
     )
     
+    reduce_lr = ReduceLROnPlateau(
+    monitor="val_loss",
+    factor=0.5,
+    patience=3,
+    min_lr=1e-6,
+    verbose=1
+    )
+    
     model_checkpoint = ModelCheckpoint(
     filepath=model_path,
     monitor="val_loss",
@@ -514,7 +540,7 @@ for fold, (train_idx, test_idx) in enumerate(skf.split(X, y), start=1):
 
     callbacks=[
         early_stopping,
-        model_checkpoint
+        reduce_lr
     ],
 
     verbose=1

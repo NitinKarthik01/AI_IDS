@@ -2,9 +2,15 @@ Model: "PCC_CNN"
 _________________________________________________________________
  Layer (type)                Output Shape              Param #   
 =================================================================
- Conv1 (Conv1D)              (None, 15, 96)            480       
+ Conv1 (Conv1D)              (None, 15, 128)           640       
                                                                  
- Conv2 (Conv1D)              (None, 15, 64)            18496     
+ batch_normalization_36 (Bat  (None, 15, 128)          512       
+ chNormalization)                                                
+                                                                 
+ Conv2 (Conv1D)              (None, 15, 64)            24640     
+                                                                 
+ batch_normalization_37 (Bat  (None, 15, 64)           256       
+ chNormalization)                                                
                                                                  
  Conv3 (Conv1D)              (None, 15, 32)            4128      
                                                                  
@@ -12,14 +18,24 @@ _________________________________________________________________
                                                                  
  Dense_512 (Dense)           (None, 512)               246272    
                                                                  
+ batch_normalization_38 (Bat  (None, 512)              2048      
+ chNormalization)                                                
+                                                                 
+ dropout_18 (Dropout)        (None, 512)               0         
+                                                                 
  Dense_128 (Dense)           (None, 128)               65664     
+                                                                 
+ batch_normalization_39 (Bat  (None, 128)              512       
+ chNormalization)                                                
+                                                                 
+ dropout_19 (Dropout)        (None, 128)               0         
                                                                  
  Dense_32 (Dense)            (None, 32)                4128      
                                                                  
  Output (Dense)              (None, 34)                1122      
                                                                  
 =================================================================
-Total params: 340,290
-Trainable params: 340,290
-Non-trainable params: 0
+Total params: 349,922
+Trainable params: 348,258
+Non-trainable params: 1,664
 _________________________________________________________________

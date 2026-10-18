@@ -25,15 +25,18 @@ from sklearn.metrics import (
 
 from tensorflow.keras.models import Sequential
 from tensorflow.keras.layers import (
-    Input,
     Dense,
     Dropout,
-    BatchNormalization
+    BatchNormalization,
+   # InputLayer,
+    Activation,
+    Input
 )
 from tensorflow.keras.optimizers import Adam
 from tensorflow.keras.callbacks import (
     EarlyStopping,
-    ModelCheckpoint
+    ModelCheckpoint,
+    ReduceLROnPlateau
 )
 
 warnings.filterwarnings("ignore")
@@ -46,7 +49,7 @@ SEED = 42
 
 CLASSIFICATION = "multiclass"
 
-THRESHOLD = "0.10"
+THRESHOLD = "0.9"
 
 N_SPLITS = 10
 
@@ -54,6 +57,7 @@ BATCH_SIZE = 256
 
 EPOCHS = 50
 
+#LEARNING_RATE = 0.0005
 LEARNING_RATE = 0.001
 
 DEBUG_ONE_FOLD = False
@@ -71,7 +75,7 @@ def build_pcc_ann(input_shape, classification="binary", num_classes=None):
     # Input Layer
     # ------------------------------------------------------
     model.add(
-        Input(shape=(input_shape,))
+        Input(shape=input_shape)
     )
 
     # ------------------------------------------------------
@@ -80,40 +84,63 @@ def build_pcc_ann(input_shape, classification="binary", num_classes=None):
     model.add(
         Dense(
             512,
-            activation="relu",
+            activation=None,
             name="Dense_512"
         )
     )
 
-    model.add(BatchNormalization())
+   # model.add(BatchNormalization())
+    
+    model.add(Activation("relu"))
 
-    model.add(Dropout(0.3))
-
+    #model.add(Dropout(0.3))
+    
     # ------------------------------------------------------
     # Hidden Layer 2
     # ------------------------------------------------------
-    model.add(
-        Dense(
-            128,
-            activation="relu",
-            name="Dense_128"
-        )
-    )
+   # model.add(
+   #    Dense(
+   #       256,
+   #         activation=None,
+   #         name="Dense_256"
+   #     )
+   # )
 
-    model.add(BatchNormalization())
+   # model.add(BatchNormalization())
+    
+    model.add(Activation("relu"))
 
-    model.add(Dropout(0.3))
+   # model.add(Dropout(0.3))
 
     # ------------------------------------------------------
     # Hidden Layer 3
     # ------------------------------------------------------
     model.add(
         Dense(
-            32,
-            activation="relu",
-            name="Dense_32"
+            128,
+            activation=None,
+            name="Dense_128"
         )
     )
+
+   # model.add(BatchNormalization())
+    
+    model.add(Activation("relu"))
+
+   # model.add(Dropout(0.3))
+
+    # ------------------------------------------------------
+    # Hidden Layer 4
+    # ------------------------------------------------------
+    model.add(
+        Dense(
+            64,
+            activation=None,
+            name="Dense_64"
+        )
+    )
+    
+    model.add(Activation("relu"))
 
     # ------------------------------------------------------
     # Output Layer
@@ -160,8 +187,8 @@ def build_pcc_ann(input_shape, classification="binary", num_classes=None):
 PROJECT_ROOT = "/home/dhanush2026/dhanush2026/AI_IDS"
 
 DATASET_FILE = (
-    f"{PROJECT_ROOT}/PCC_RESULTS/"
-    f"threshold_{THRESHOLD}/reduced_dataset.csv"
+    f"{PROJECT_ROOT}/DATASETS/"
+    f"MERGED_CSV_PCC_Selected.csv"
 )
 
 MODEL_DIR = (
@@ -204,9 +231,9 @@ hyperparameters = pd.DataFrame({
         LEARNING_RATE,
         "Adam",
         "Sparse Categorical Crossentropy",
-        "512 -> 128 -> 32",
+        "512 -> 128 -> 64",
         "ReLU + Softmax",
-        "0.30",
+        "None",
         f"{N_SPLITS}-Fold Stratified",
         "10",
         "Balanced"
@@ -233,8 +260,10 @@ tf.random.set_seed(SEED)
 # ===========================
 
 DATASET_FILE = (
-    f"/home/dhanush2026/dhanush2026/AI_IDS/"
-    f"PCC_RESULTS/threshold_{THRESHOLD}/reduced_dataset.csv"
+    #f"/home/dhanush2026/dhanush2026/AI_IDS/"
+    #f"PCC_RESULTS/threshold_{THRESHOLD}/reduced_dataset.csv"
+    f"{PROJECT_ROOT}/DATASETS/"
+    f"MERGED_CSV_PCC_Selected.csv"
 )
 
 # ===========================
@@ -444,8 +473,17 @@ for fold, (train_idx, test_idx) in enumerate(skf.split(X, y), start=1):
     
     early_stopping = EarlyStopping(
     monitor="val_loss",
-    patience=5,
+    #patience=10,
+    patience = 5,
     restore_best_weights=True,
+    verbose=1
+    )
+    
+    reduce_lr = ReduceLROnPlateau(
+    monitor="val_loss",
+    factor=0.5,
+    patience=3,
+    min_lr=1e-6,
     verbose=1
     )
     
@@ -465,14 +503,13 @@ for fold, (train_idx, test_idx) in enumerate(skf.split(X, y), start=1):
     
     from sklearn.utils.class_weight import compute_class_weight
     
-    classes = np.unique(y_train)
     weights = compute_class_weight(
     class_weight="balanced",
-    classes=classes,
+    classes=np.unique(y_train),
     y=y_train
     )
     
-    class_weights = dict(zip(classes, weights))
+    class_weights = dict(enumerate(weights))
     
     print(class_weights)
     
@@ -493,6 +530,7 @@ for fold, (train_idx, test_idx) in enumerate(skf.split(X, y), start=1):
 
     callbacks=[
         early_stopping,
+        reduce_lr,
         model_checkpoint
     ],
 
