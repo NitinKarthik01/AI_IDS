@@ -8,8 +8,8 @@ AI_IDS/
 DL/MODELS/
 ML/MODELS/
 ML/MODELS/
+aiids_env/
 *.joblib
 *.keras
 *.h5
 *.pkl
-
