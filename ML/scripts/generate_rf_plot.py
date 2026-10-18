@@ -20,7 +20,7 @@ RESULT_PATH = os.path.join(
     PROJECT_ROOT,
     "RESULTS",
     "RandomForest_MULTICLASS",          
-    "threshold_0.10"
+    "threshold_0.90"
 )
 
 REPORT_PATH = os.path.join(
