@@ -47,7 +47,7 @@ SEED = 42
 np.random.seed(SEED)
 random.seed(SEED)
 
-THRESHOLD = "0.10"
+THRESHOLD = "0.90"
 
 CLASSIFICATION = "multiclass"
 
@@ -60,8 +60,10 @@ N_SPLITS = 10
 PROJECT_ROOT = "/home/dhanush2026/dhanush2026/AI_IDS"
 
 DATASET_FILE = (
-    f"{PROJECT_ROOT}/PCC_RESULTS/"
-    f"threshold_{THRESHOLD}/reduced_dataset.csv"
+    #f"{PROJECT_ROOT}/PCC_RESULTS/"
+    #f"threshold_{THRESHOLD}/reduced_dataset.csv"
+    f"{PROJECT_ROOT}/DATASETS/"
+    f"MERGED_CSV_PCC_Selected.csv"
 )
 
 MODEL_DIR = (
