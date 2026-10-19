@@ -7,8 +7,10 @@ import pandas as pd
 import tensorflow as tf
 
 from architecture import save_model_architecture
-
+from sklearn.model_selection import train_test_split
 from sklearn.model_selection import StratifiedKFold
+from imblearn.over_sampling import BorderlineSMOTE
+from imblearn.over_sampling import SMOTE
 from sklearn.preprocessing import LabelEncoder, StandardScaler
 from sklearn.metrics import (
     accuracy_score,
@@ -30,7 +32,9 @@ from tensorflow.keras.layers import (
     Conv1D,
     Flatten,
     Dense,
-    BatchNormalization
+    BatchNormalization,
+    MaxPooling1D,
+    Activation
 )
 from tensorflow.keras.optimizers import Adam
 from tensorflow.keras.callbacks import (
@@ -52,8 +56,9 @@ CLASSIFICATION = "multiclass"
 THRESHOLD = "0.90"
 
 N_SPLITS = 10
+#N_SPLITS = 2
 
-BATCH_SIZE = 256
+BATCH_SIZE = 512
 
 EPOCHS = 50
 
@@ -79,46 +84,66 @@ def build_pcc_cnn(input_shape, classification="binary", num_classes=None):
     # Convolution Block 1
     # ------------------------------------------------------
     model.add(
-        Conv1D(
-            filters=96,
-            kernel_size=4,
-            strides=1,
-            padding="same",
-            activation="relu",
-            name="Conv1"
-        )
+    Conv1D(
+        filters=96,
+        kernel_size=4,
+        strides=1,
+        padding="same",
+        use_bias=False,
+        name="Conv1"
     )
-    #model.add(BatchNormalization())
+    
+    )
+    
+    model.add(BatchNormalization())
+    
+    model.add(Activation("relu"))
+    
+    #model.add(MaxPooling1D(pool_size=2))
+    
+    model.add(Dropout(0.10))
 
     # ------------------------------------------------------
     # Convolution Block 2
     # ------------------------------------------------------
     model.add(
         Conv1D(
-            filters=64,
-            kernel_size=3,
-            strides=1,
-            padding="same",
-            activation="relu",
-            name="Conv2"
-        )
+        filters=64,
+        kernel_size=3,
+        strides=1,
+        padding="same",
+        use_bias=False,
+        name="Conv2"
     )
     
-   # model.add(BatchNormalization())
+    )
+    
+    model.add(BatchNormalization())
+    
+    model.add(Activation("relu"))
+    
+    #model.add(MaxPooling1D(pool_size=2))
+    
+    model.add(Dropout(0.15))
 
     # ------------------------------------------------------
     # Convolution Block 3
     # ------------------------------------------------------
     model.add(
         Conv1D(
-            filters=32,
-            kernel_size=2,
-            strides=1,
-            padding="same",
-            activation="relu",
-            name="Conv3"
-        )
+        filters=32,
+        kernel_size=2,
+        strides=1,
+        padding="same",
+        use_bias=False,
+        name="Conv3"
     )
+    
+    )
+    
+    model.add(BatchNormalization())
+    
+    model.add(Activation("relu"))
 
     # ------------------------------------------------------
     # Flatten
@@ -132,13 +157,13 @@ def build_pcc_cnn(input_shape, classification="binary", num_classes=None):
     )
     #model.add(BatchNormalization())
     
-    #model.add(Dropout(0.3))
+    model.add(Dropout(0.2))
 
     model.add(Dense(128, activation="relu", name="Dense_128")
     )
     #model.add(BatchNormalization())
     
-   # model.add(Dropout(0.3))
+    model.add(Dropout(0.15))
 
     model.add(Dense(32, activation="relu", name="Dense_32"))
 
@@ -188,12 +213,12 @@ DATASET_FILE = (
 )
 
 MODEL_DIR = (
-    f"{PROJECT_ROOT}/DL/MODELS/CNN_MULTICLASS/"
+    f"{PROJECT_ROOT}/DL/MODELS/CNN_MULTICLASS_SMOTE/"
     f"threshold_{THRESHOLD}"
 )
 
 RESULT_DIR = (
-    f"{PROJECT_ROOT}/DL/RESULTS/CNN_MULTICLASS/"
+    f"{PROJECT_ROOT}/DL/RESULTS/CNN_MULTICLASS_SMOTE/"
     f"threshold_{THRESHOLD}"
 )
 
@@ -431,6 +456,55 @@ for fold, (train_idx, test_idx) in enumerate(skf.split(X, y), start=1):
        
     print("Training Mean :", np.mean(X_train))
     print("Training Std  :", np.std(X_train))
+    
+    # -----------------------------------------------------
+    # SMOTE SAMPLING
+    # -----------------------------------------------------
+    sampling_strategy = {}
+    
+    class_counts = pd.Series(y_train).value_counts().sort_index()
+    
+    print("=" * 60)
+    print("Building Sampling Strategy")
+    print("=" * 60)
+    
+    for label, count in class_counts.items():
+
+     if count < 100:
+        sampling_strategy[label] = 5000
+
+     elif count < 500:
+        sampling_strategy[label] = 7000
+
+     elif count < 2000:
+        sampling_strategy[label] = 10000
+
+     elif count < 10000:
+        sampling_strategy[label] = 20000
+
+     elif count < 30000:
+        sampling_strategy[label] = 30000
+
+     elif count < 50000:
+        sampling_strategy[label] = 50000
+    print("\nSampling Strategy")
+    for k, v in sampling_strategy.items():
+     print(f"Class {k:2d}: {class_counts[k]} -> {v}")
+     
+     
+    smote = SMOTE(
+    sampling_strategy=sampling_strategy,
+    random_state=SEED,
+    k_neighbors=2
+    )
+    
+    X_train, y_train = smote.fit_resample(
+    X_train,
+    y_train
+    )
+    
+    print("\nAfter SMOTE")
+    print(pd.Series(y_train).value_counts().sort_index())
 
     # ------------------------------------------------------
     # Reshape for CNN
@@ -523,14 +597,24 @@ for fold, (train_idx, test_idx) in enumerate(skf.split(X, y), start=1):
     
     print(class_weights)
     
+    X_train_new, X_val, y_train_new, y_val = train_test_split(
+    X_train,
+    y_train,
+    test_size=0.05,
+    random_state=SEED,
+    stratify=y_train,
+    shuffle=True
+    )
+    
     print("\nTraining Started...\n")
     
     history = model.fit(
 
-    X_train,
-    y_train,
+    X_train_new,
 
-    validation_data=(X_test, y_test),
+    y_train_new,
+
+    validation_data=(X_val, y_val),
 
     epochs=EPOCHS,
 

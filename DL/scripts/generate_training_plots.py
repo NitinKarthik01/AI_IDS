@@ -10,7 +10,7 @@ import matplotlib.pyplot as plt
 
 PROJECT_ROOT = "/home/dhanush2026/dhanush2026/AI_IDS/DL"
 
-MODEL_NAME = "ANN_MULTICLASS"
+MODEL_NAME = "CNN_MULTICLASS_SMOTE"
 
 THRESHOLD = "0.90"
 

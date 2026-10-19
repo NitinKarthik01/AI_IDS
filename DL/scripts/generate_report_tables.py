@@ -8,7 +8,7 @@ import matplotlib.pyplot as plt
 
 PROJECT_ROOT = "/home/dhanush2026/dhanush2026/AI_IDS/DL"
 
-MODEL_NAME = "ANN_MULTICLASS"
+MODEL_NAME = "CNN_MULTICLASS_SMOTE"
 
 # PROJECT_ROOT = r"C:\Dhanush\D\MSIS\Mini Project\ML"
 
@@ -34,7 +34,7 @@ os.makedirs(REPORT_PATH, exist_ok=True)
 
 # ======================================================
 
-if MODEL_NAME == "CNN_MULTICLASS":
+if MODEL_NAME == "CNN_MULTICLASS_SMOTE":
     arch_file = "cnn_multiclass_architecture.csv"
 else:
     arch_file = "ann_multiclass_architecture.csv"

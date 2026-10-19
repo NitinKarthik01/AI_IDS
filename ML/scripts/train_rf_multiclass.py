@@ -5,6 +5,9 @@ import random
 import warnings
 import joblib
 import matplotlib.pyplot as plt
+from sklearn.utils import resample
+from imblearn.over_sampling import SMOTE
+from imblearn.under_sampling import RandomUnderSampler
 
 from sklearn.metrics import ConfusionMatrixDisplay
 
@@ -51,7 +54,7 @@ THRESHOLD = "0.90"
 
 CLASSIFICATION = "multiclass"
 
-N_SPLITS = 10
+N_SPLITS = 2
 
 # ==========================================================
 # PATHS
@@ -68,12 +71,12 @@ DATASET_FILE = (
 
 MODEL_DIR = (
     f"{PROJECT_ROOT}/ML/MODELS/"
-    f"RandomForest_MULTICLASS/threshold_{THRESHOLD}"
+    f"RandomForest_MULTICLASS_SMOTE/threshold_{THRESHOLD}"
 )
 
 RESULT_DIR = (
     f"{PROJECT_ROOT}/ML/RESULTS/"
-    f"RandomForest_MULTICLASS/threshold_{THRESHOLD}"
+    f"RandomForest_MULTICLASS_SMOTE/threshold_{THRESHOLD}"
 )
 
 os.makedirs(MODEL_DIR, exist_ok=True)
@@ -131,6 +134,7 @@ if CLASSIFICATION == "multiclass":
 print("\nClass Distribution:")
 print(df["Label"].value_counts())
 
+
 # ==========================================================
 # FEATURES
 # ==========================================================
@@ -142,6 +146,37 @@ feature_names = X.columns
 
 print("\nFeature Shape:", X.shape)
 print("Label Shape:", y.shape)
+
+# ==========================================================
+# CUSTOM SMOTE STRATEGY
+# ==========================================================
+
+#class_counts = df["Label"].value_counts()
+
+#sampling_strategy = {}
+
+#TARGET = 50000
+
+
+#for label, count in class_counts.items():
+
+#    if count >= TARGET:
+#        continue
+
+#    elif count >= 10000:
+#        sampling_strategy[label] = 25000
+
+ #   elif count >= 1000:
+ #       sampling_strategy[label] = 15000
+
+#    else:
+#        sampling_strategy[label] = 8000
+
+#print("\nCustom SMOTE Strategy")
+#print("="*60)
+
+#for k, v in sampling_strategy.items():
+#    print(k, "->", v)
 
 # ==========================================================
 # NUMPY CONVERSION
@@ -194,6 +229,11 @@ results = []
 
 fold = 1
 
+#print("\nSampling Strategy")
+#print("="*60)
+
+#print(sampling_strategy)
+
 # ==========================================================
 # 10-FOLD CROSS VALIDATION
 # ==========================================================
@@ -221,15 +261,24 @@ for train_idx, test_idx in skf.split(X, y):
 
     X_train = scaler.fit_transform(X_train)
     X_test = scaler.transform(X_test)
-
+    
+    
     # ======================================================
     # RANDOM FOREST MODEL
     # ======================================================
 
     model = RandomForestClassifier(
-        n_estimators=100,
-        random_state=SEED,
-        n_jobs=-1
+            n_estimators=300,
+            
+            criterion="gini",
+            
+            max_features="sqrt",
+            
+            class_weight="balanced_subsample",
+            
+            random_state=SEED,
+            
+            n_jobs=-1
     )
 
     # ======================================================
