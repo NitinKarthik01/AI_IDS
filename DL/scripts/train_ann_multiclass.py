@@ -6,6 +6,9 @@ import numpy as np
 import pandas as pd
 import tensorflow as tf
 
+from imblearn.over_sampling import BorderlineSMOTE
+from imblearn.over_sampling import SMOTE
+from sklearn.model_selection import train_test_split
 
 from architecture import save_model_architecture
 
@@ -52,8 +55,9 @@ CLASSIFICATION = "multiclass"
 THRESHOLD = "0.9"
 
 N_SPLITS = 10
+#N_SPLITS = 2
 
-BATCH_SIZE = 256
+BATCH_SIZE = 512
 
 EPOCHS = 50
 
@@ -81,36 +85,32 @@ def build_pcc_ann(input_shape, classification="binary", num_classes=None):
     # ------------------------------------------------------
     # Hidden Layer 1
     # ------------------------------------------------------
-    model.add(
-        Dense(
-            512,
-            activation=None,
-            name="Dense_512"
-        )
-    )
+    model.add(Dense(512, activation="relu"))
+    model.add(BatchNormalization())
+    model.add(Dropout(0.40))
 
    # model.add(BatchNormalization())
     
-    model.add(Activation("relu"))
+    #model.add(Activation("relu"))
 
     #model.add(Dropout(0.3))
     
     # ------------------------------------------------------
     # Hidden Layer 2
     # ------------------------------------------------------
-   # model.add(
-   #    Dense(
-   #       256,
-   #         activation=None,
-   #         name="Dense_256"
-   #     )
-   # )
+    model.add(
+       Dense(
+          256,
+            activation="relu",
+            name="Dense_256"
+        )
+    )
 
-   # model.add(BatchNormalization())
+    model.add(BatchNormalization())
     
-    model.add(Activation("relu"))
+    #model.add(Activation("relu"))
 
-   # model.add(Dropout(0.3))
+    model.add(Dropout(0.3))
 
     # ------------------------------------------------------
     # Hidden Layer 3
@@ -118,16 +118,16 @@ def build_pcc_ann(input_shape, classification="binary", num_classes=None):
     model.add(
         Dense(
             128,
-            activation=None,
+            activation="relu",
             name="Dense_128"
         )
     )
 
-   # model.add(BatchNormalization())
+    model.add(BatchNormalization())
     
-    model.add(Activation("relu"))
+   # model.add(Activation("relu"))
 
-   # model.add(Dropout(0.3))
+    model.add(Dropout(0.25))
 
     # ------------------------------------------------------
     # Hidden Layer 4
@@ -135,12 +135,15 @@ def build_pcc_ann(input_shape, classification="binary", num_classes=None):
     model.add(
         Dense(
             64,
-            activation=None,
+            activation="relu",
             name="Dense_64"
         )
     )
+    model.add(BatchNormalization())
     
-    model.add(Activation("relu"))
+    model.add(Dropout(0.20))
+    
+    #model.add(Activation("relu"))
 
     # ------------------------------------------------------
     # Output Layer
@@ -192,12 +195,12 @@ DATASET_FILE = (
 )
 
 MODEL_DIR = (
-    f"{PROJECT_ROOT}/DL/MODELS/ANN_MULTICLASS/"
+    f"{PROJECT_ROOT}/DL/MODELS/ANN_MULTICLASS_SMOTE/"
     f"threshold_{THRESHOLD}"
 )
 
 RESULT_DIR = (
-    f"{PROJECT_ROOT}/DL/RESULTS/ANN_MULTICLASS/"
+    f"{PROJECT_ROOT}/DL/RESULTS/ANN_MULTICLASS_SMOTE/"
     f"threshold_{THRESHOLD}"
 )
 
@@ -339,6 +342,7 @@ X = df.drop(columns=["Label"])
 print("\nFeature Matrix Shape :", X.shape)
 print("Label Vector Shape   :", y.shape)
 
+
 # ==========================================================
 # CONVERT TO NUMPY
 # ==========================================================
@@ -440,6 +444,63 @@ for fold, (train_idx, test_idx) in enumerate(skf.split(X, y), start=1):
     print("\nANN Input Shape")
     print("X_train :", X_train.shape)
     print("X_test  :", X_test.shape)
+    
+    # ==========================================================
+    # BUILD SAMPLING STRATEGY
+    # ==========================================================
+    
+    sampling_strategy = {}
+    
+    class_counts = pd.Series(y_train).value_counts().sort_index()
+    
+    print("=" * 60)
+    print("Building Sampling Strategy")
+    print("=" * 60)
+    for label, count in class_counts.items():
+     if count < 100:
+        sampling_strategy[label] = 5000
+        
+     elif count < 500:
+        sampling_strategy[label] = 7000
+
+     elif count < 2000:
+        sampling_strategy[label] = 10000
+
+     elif count < 10000:
+        sampling_strategy[label] = 20000
+
+     elif count < 30000:
+        sampling_strategy[label] = 30000
+
+     elif count < 50000:
+        sampling_strategy[label] = 50000
+        
+    print("\nSampling Strategy")
+    for k, v in sampling_strategy.items():
+     print(f"Class {k:2d} : {class_counts[k]} -> {v}")
+    
+    # ==========================================================
+    # APPLY BORDERLINE SMOTE
+    # ==========================================================
+    
+    smote = SMOTE(
+    sampling_strategy=sampling_strategy,
+    random_state=SEED,
+    k_neighbors=2
+    
+    )
+    
+    X_train, y_train = smote.fit_resample(
+
+    X_train,
+
+    y_train
+    
+    )
+    
+    print("\nAfter  SMOTE")
+    
+    print(pd.Series(y_train).value_counts().sort_index())
 
     # ------------------------------------------------------
     # Build PCC-ANN Model
@@ -452,6 +513,33 @@ for fold, (train_idx, test_idx) in enumerate(skf.split(X, y), start=1):
         classification=CLASSIFICATION,
         num_classes=num_classes
     )
+    
+    
+    
+    
+    early_stop = EarlyStopping(
+
+    monitor="val_loss",
+
+    patience=8,
+
+    restore_best_weights=True
+    
+    )
+    
+    reduce_lr = ReduceLROnPlateau(
+
+    monitor="val_loss",
+
+    factor=0.5,
+
+    patience=4,
+
+    min_lr=1e-6
+    
+    )
+    
+    
     
     save_model_architecture(
     model,
@@ -471,30 +559,30 @@ for fold, (train_idx, test_idx) in enumerate(skf.split(X, y), start=1):
     f"fold_{fold}_best.keras"
     )
     
-    early_stopping = EarlyStopping(
-    monitor="val_loss",
+   # early_stopping = EarlyStopping(
+    #monitor="val_loss",
     #patience=10,
-    patience = 5,
-    restore_best_weights=True,
-    verbose=1
-    )
+   # patience = 5,
+   # restore_best_weights=True,
+   # verbose=1
+   # )
     
-    reduce_lr = ReduceLROnPlateau(
-    monitor="val_loss",
-    factor=0.5,
-    patience=3,
-    min_lr=1e-6,
-    verbose=1
-    )
+   # reduce_lr = ReduceLROnPlateau(
+   # monitor="val_loss",
+   # factor=0.5,
+   # patience=3,
+   # min_lr=1e-6,
+   # verbose=1
+   # )
     
-    model_checkpoint = ModelCheckpoint(
-    filepath=model_path,
-    monitor="val_loss",
-    save_best_only=True,
-    verbose=1
-    )
+    #model_checkpoint = ModelCheckpoint(
+    #filepath=model_path,
+    #monitor="val_loss",
+    #save_best_only=True,
+    #verbose=1
+    #)
     
-    print("\nCallbacks Initialized")
+    #print("\nCallbacks Initialized")
     
     # ==========================================================
     # TRAIN MODEL
@@ -513,29 +601,66 @@ for fold, (train_idx, test_idx) in enumerate(skf.split(X, y), start=1):
     
     print(class_weights)
     
+    # ==========================================================
+    # CREATE STRATIFIED VALIDATION SET
+    # ==========================================================
+    
+    X_train_new, X_val, y_train_new, y_val = train_test_split(
+    X_train,
+    y_train,
+    test_size=0.05,
+    random_state=SEED,
+    stratify=y_train,
+    shuffle=True
+    )
+    
+    print("\nTraining Shape :", X_train_new.shape)
+    print("Validation Shape :", X_val.shape)
+    
     print("\nTraining Started...\n")
     
     history = model.fit(
+    
+    X_train_new,
 
-    X_train,
-    y_train,
+    y_train_new,
 
-    validation_data=(X_test, y_test),
+    validation_data=(X_val, y_val),
 
-    epochs=EPOCHS,
+    epochs=50,
 
     batch_size=BATCH_SIZE,
-    
-    class_weight=class_weights,
 
     callbacks=[
-        early_stopping,
-        reduce_lr,
-        model_checkpoint
+        early_stop,
+        reduce_lr
     ],
 
     verbose=1
+    
     )
+    
+   # history = model.fit(
+
+   # X_train,
+   # y_train,
+
+   # validation_data=(X_test, y_test),
+
+   # epochs=EPOCHS,
+
+   # batch_size=BATCH_SIZE,
+    
+   # class_weight=class_weights,
+
+   # callbacks=[
+   #     early_stopping,
+   #     reduce_lr,
+   #     model_checkpoint
+   # ],
+
+   # verbose=1
+#    )
     # ==========================================================
     # SAVE TRAINING HISTORY
     # ==========================================================

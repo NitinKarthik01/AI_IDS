@@ -13,18 +13,18 @@ PROJECT_ROOT = "/data/dhanush2026/AI_IDS"
 
 DATA_PATH = os.path.join(
     PROJECT_ROOT,
-    "PCC_RESULTS",
-    "threshold_0.10",
-    "reduced_dataset.csv"      # Change if filename differs
+    "DATASETS",
+    #"threshold_0.10",
+    "MERGED_CSV_PCC_Selected.csv"      # Change if filename differs
 )
 
 SAVE_PATH = os.path.join(
     PROJECT_ROOT,
     "DL",
-    "RESULTS",
-    "ANN_MULTICLASS",
-    "threshold_0.10",
-    "REPORT"
+    "RESULTS"
+    #"ANN_MULTICLASS",
+    #"threshold_0.10",
+   # "REPORT"
 )
 
 os.makedirs(SAVE_PATH, exist_ok=True)
