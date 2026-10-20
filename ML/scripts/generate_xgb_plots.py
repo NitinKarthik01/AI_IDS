@@ -48,6 +48,8 @@ results = pd.read_csv(
     )
 )
 
+print(results.columns.tolist())
+
 # ==========================================================
 # FOLD ACCURACY
 # ==========================================================
@@ -55,8 +57,8 @@ results = pd.read_csv(
 plt.figure(figsize=(8,5))
 
 plt.plot(
-    results["Fold"],
-    results["Accuracy"],
+    results["Fold"].to_numpy(),
+    results["Accuracy"].to_numpy(),
     marker="o",
     linewidth=2
 )
@@ -95,11 +97,14 @@ means = results[metrics].mean()
 
 plt.figure(figsize=(10,5))
 
-means.plot(kind="bar")
+plt.bar(
+    means.index,
+    means.values
+)
 
 plt.ylabel("Score")
 plt.ylim(0,1.05)
-plt.title("Average Metric Comparison")
+plt.xticks(rotation=20)
 
 plt.tight_layout()
 
