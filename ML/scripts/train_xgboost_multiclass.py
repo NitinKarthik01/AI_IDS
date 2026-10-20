@@ -6,6 +6,7 @@ import numpy as np
 import pandas as pd
 
 from imblearn.over_sampling import SMOTE
+from sklearn.metrics import classification_report
 from sklearn.model_selection import StratifiedKFold
 from sklearn.preprocessing import LabelEncoder, StandardScaler
 
@@ -260,17 +261,28 @@ for fold, (train_idx, test_idx) in enumerate(skf.split(X, y), start=1):
     X_train = scaler.fit_transform(X_train)
     X_test = scaler.transform(X_test)
 
-    if fold == 1:
+    if accuracy > best_accuracy:
+
+        best_accuracy = accuracy
+
+        model.save_model(
+            os.path.join(
+                MODEL_DIR,
+                "best_xgboost_model.json"
+            )
+        )
 
         joblib.dump(
             scaler,
             os.path.join(
                 MODEL_DIR,
-                "scaler.pkl"
+                "best_scaler.pkl"
             )
         )
 
-    print("\nFeature Scaling Completed")
+        print("Best model updated.")
+
+        print("\nFeature Scaling Completed")
 
     # ======================================================
     # BUILD SAMPLING STRATEGY
@@ -318,22 +330,30 @@ for fold, (train_idx, test_idx) in enumerate(skf.split(X, y), start=1):
     # APPLY SMOTE
     # ======================================================
 
-    smote = SMOTE(
+    if sampling_strategy:
 
-        sampling_strategy=sampling_strategy,
+        smote = SMOTE(
+            sampling_strategy=sampling_strategy,
+            random_state=SEED,
+            k_neighbors=2
+        )
 
-        random_state=SEED,
+        X_train, y_train = smote.fit_resample(
+            X_train,
+            y_train
+        )
 
-        k_neighbors=2
+        print("\nAfter SMOTE")
 
-    )
+        print(
+            pd.Series(y_train)
+            .value_counts()
+            .sort_index()
+        )
 
-    X_train, y_train = smote.fit_resample(
+    else:
 
-        X_train,
-        y_train
-
-    )
+        print("\nNo classes require SMOTE. Skipping oversampling.")
 
     print("\nAfter SMOTE")
 
@@ -422,6 +442,34 @@ for fold, (train_idx, test_idx) in enumerate(skf.split(X, y), start=1):
     y_prob = model.predict_proba(X_test)
 
     print("Prediction Shape :", y_pred.shape)
+
+    report = classification_report(
+
+    y_test,
+
+    y_pred,
+
+    target_names=label_encoder.classes_,
+
+    output_dict=True,
+
+    zero_division=0
+
+    )
+
+    pd.DataFrame(report).transpose().to_csv(
+
+        os.path.join(
+
+            RESULT_DIR,
+
+            f"classification_report_fold_{fold}.csv"
+
+        )
+
+    )
+
+    print("Classification Report Saved.")
 
     print("\ny_train distribution:")
     print(pd.Series(y_train).value_counts())
