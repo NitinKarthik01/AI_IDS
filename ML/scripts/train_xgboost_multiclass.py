@@ -261,29 +261,6 @@ for fold, (train_idx, test_idx) in enumerate(skf.split(X, y), start=1):
     X_train = scaler.fit_transform(X_train)
     X_test = scaler.transform(X_test)
 
-    if accuracy > best_accuracy:
-
-        best_accuracy = accuracy
-
-        model.save_model(
-            os.path.join(
-                MODEL_DIR,
-                "best_xgboost_model.json"
-            )
-        )
-
-        joblib.dump(
-            scaler,
-            os.path.join(
-                MODEL_DIR,
-                "best_scaler.pkl"
-            )
-        )
-
-        print("Best model updated.")
-
-        print("\nFeature Scaling Completed")
-
     # ======================================================
     # BUILD SAMPLING STRATEGY
     # ======================================================
@@ -355,13 +332,13 @@ for fold, (train_idx, test_idx) in enumerate(skf.split(X, y), start=1):
 
         print("\nNo classes require SMOTE. Skipping oversampling.")
 
-    print("\nAfter SMOTE")
+    # print("\nAfter SMOTE")
 
-    print(
-        pd.Series(y_train)
-        .value_counts()
-        .sort_index()
-    )
+    # print(
+    #     pd.Series(y_train)
+    #     .value_counts()
+    #     .sort_index()
+    # )
 
     # ======================================================
     # BUILD XGBOOST MODEL
@@ -634,7 +611,21 @@ for fold, (train_idx, test_idx) in enumerate(skf.split(X, y), start=1):
 
         )
 
-        print("Best model updated.")
+        joblib.dump(
+
+        scaler,
+
+        os.path.join(
+
+            MODEL_DIR,
+
+            "best_scaler.pkl"
+
+        )
+
+        )
+
+        print("Best model and scaler updated.")
 
     # ==========================================================
     # DEBUG
