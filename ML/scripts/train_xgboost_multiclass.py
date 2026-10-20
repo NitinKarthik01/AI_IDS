@@ -70,6 +70,8 @@ PROJECT_ROOT = "/home/dhanush2026/dhanush2026/AI_IDS"
 DATASET_FILE = (
     f"{PROJECT_ROOT}/DATASETS/"
     f"MERGED_CSV_PCC_Selected.csv"
+    #f"{PROJECT_ROOT}/PCC_RESULTS/"
+    #f"threshold_{THRESHOLD}/reduced_dataset.csv"
 )
 
 MODEL_DIR = (
@@ -371,10 +373,14 @@ for fold, (train_idx, test_idx) in enumerate(skf.split(X, y), start=1):
         reg_lambda=REG_LAMBDA,
 
         tree_method="hist",
+        
+        device="cuda",
 
         random_state=SEED,
 
         eval_metric="mlogloss",
+        
+        verbosity = 2,
 
         n_jobs=-1
 
@@ -419,17 +425,27 @@ for fold, (train_idx, test_idx) in enumerate(skf.split(X, y), start=1):
     y_prob = model.predict_proba(X_test)
 
     print("Prediction Shape :", y_pred.shape)
+    
+    print("Unique classes in y_train :", np.unique(y_train))
+    
+    print("Unique classes in y_test  :", np.unique(y_test))
+    
+    print("Number of classes in y_test :", len(np.unique(y_test)))
+    
+    print("Total classes :", num_classes)
 
     report = classification_report(
 
     y_test,
-
+    
     y_pred,
-
+    
+    labels=np.arange(num_classes),
+    
     target_names=label_encoder.classes_,
-
+    
     output_dict=True,
-
+    
     zero_division=0
 
     )
@@ -494,6 +510,7 @@ for fold, (train_idx, test_idx) in enumerate(skf.split(X, y), start=1):
     auc = roc_auc_score(
         y_test,
         y_prob,
+        labels=np.arange(num_classes),
         multi_class="ovr",
         average="macro"
     )
