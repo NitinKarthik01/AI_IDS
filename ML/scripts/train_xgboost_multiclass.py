@@ -203,70 +203,67 @@ print("Cleaning Completed.")
 # FEATURES
 # ==========================================================
 
-X = df.drop(columns=["Label"]).values.astype(np.float32)
+X = df.drop(columns=["Label"]).values
 
 # ==========================================================
-# REMOVE LOW VARIANCE FEATURES
+# LOW VARIANCE FEATURE REMOVAL
 # ==========================================================
 
-print("\n" + "=" * 60)
+from sklearn.feature_selection import VarianceThreshold
+
+print("=" * 60)
 print("Feature Variance Analysis")
 print("=" * 60)
 
-feature_variance = df.drop(columns=["Label"]).var()
+# Keep feature names before any conversion
+feature_names = list(df.drop(columns=["Label"]).columns)
+
+# Calculate variance
+variance = np.var(X, axis=0)
 
 variance_df = pd.DataFrame({
-    "Feature": df.drop(columns=["Label"]).columns,
-    "Variance": feature_variance.values
+    "Feature": feature_names,
+    "Variance": variance
 })
 
-variance_df = variance_df.sort_values(
-    by="Variance",
-    ascending=True
-)
+variance_df = variance_df.sort_values("Variance")
 
 print(variance_df)
 
 variance_df.to_csv(
     os.path.join(
         RESULT_DIR,
-        "Feature_Variance.csv"
+        "feature_variance.csv"
     ),
     index=False
 )
 
-# ----------------------------------------------------------
-# Variance Threshold
-# ----------------------------------------------------------
+# Threshold
+VAR_THRESHOLD = 0.001
 
-VARIANCE_THRESHOLD = 0.0001
+selector = VarianceThreshold(threshold=VAR_THRESHOLD)
 
-low_variance_features = variance_df[
-    variance_df["Variance"] < VARIANCE_THRESHOLD
-]["Feature"].tolist()
+X = selector.fit_transform(X)
 
-print("\nLow Variance Features")
+selected_features = np.array(feature_names)[selector.get_support()]
 
-for feature in low_variance_features:
-    print(feature)
+removed_features = np.array(feature_names)[~selector.get_support()]
 
-# ----------------------------------------------------------
-# Drop Features
-# ----------------------------------------------------------
+print("\nRemoved Features")
+for f in removed_features:
+    print(f)
 
-if len(low_variance_features) > 0:
+print("\nRemaining Features :", len(selected_features))
 
-    X.drop(
-        columns=low_variance_features,
-        inplace=True
-    )
-
-    print(f"\nDropped {len(low_variance_features)} features")
-
-else:
-
-    print("\nNo low variance features found.")
-
+pd.DataFrame({
+    "Remaining Features": selected_features
+}).to_csv(
+    os.path.join(
+        RESULT_DIR,
+        "selected_features.csv"
+    ),
+    index=False
+)
 print("\nRemaining Features :", X.shape[1])
 
 y = df["Label"].values
