@@ -340,68 +340,50 @@ print("Cleaning Completed.")
 X = df.drop(columns=["Label"])
 
 # ==========================================================
-# REMOVE LOW VARIANCE FEATURES
+# LOW VARIANCE FEATURE REMOVAL
 # ==========================================================
 
-print("\n" + "=" * 60)
+from sklearn.feature_selection import VarianceThreshold
+
+print("=" * 60)
 print("Feature Variance Analysis")
 print("=" * 60)
 
-feature_variance = X.var()
+feature_names = list(X.columns)
+
+variance = X.var()
 
 variance_df = pd.DataFrame({
-    "Feature": X.columns,
-    "Variance": feature_variance.values
+    "Feature": feature_names,
+    "Variance": variance.values
 })
 
-variance_df = variance_df.sort_values(
-    by="Variance",
-    ascending=True
-)
+variance_df = variance_df.sort_values("Variance")
 
 print(variance_df)
 
 variance_df.to_csv(
     os.path.join(
         RESULT_DIR,
-        "Feature_Variance.csv"
+        "feature_variance.csv"
     ),
     index=False
 )
 
-# ----------------------------------------------------------
-# Variance Threshold
-# ----------------------------------------------------------
+VAR_THRESHOLD = 0.001
 
-VARIANCE_THRESHOLD = 0.0001
+selector = VarianceThreshold(threshold=VAR_THRESHOLD)
 
-low_variance_features = variance_df[
-    variance_df["Variance"] < VARIANCE_THRESHOLD
-]["Feature"].tolist()
+X = selector.fit_transform(X)
 
-print("\nLow Variance Features")
+selected_features = np.array(feature_names)[selector.get_support()]
+removed_features = np.array(feature_names)[~selector.get_support()]
 
-for feature in low_variance_features:
+print("\nRemoved Features")
+for feature in removed_features:
     print(feature)
 
-# ----------------------------------------------------------
-# Drop Features
-# ----------------------------------------------------------
-
-if len(low_variance_features) > 0:
-
-    X.drop(
-        columns=low_variance_features,
-        inplace=True
-    )
-
-    print(f"\nDropped {len(low_variance_features)} features")
-
-else:
-
-    print("\nNo low variance features found.")
-
-print("\nRemaining Features :", X.shape[1])
+print("\nRemaining Features :", len(selected_features))
 
 print("\nFeature Matrix Shape :", X.shape)
 print("Label Vector Shape   :", y.shape)
@@ -411,7 +393,7 @@ print("Label Vector Shape   :", y.shape)
 # CONVERT TO NUMPY
 # ==========================================================
 
-X = X.values.astype(np.float32)
+X = X.astype(np.float32)
 y = y
 
 print("\nNumPy Conversion Completed")
