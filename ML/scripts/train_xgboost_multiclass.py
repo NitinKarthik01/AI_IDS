@@ -213,10 +213,10 @@ print("\n" + "=" * 60)
 print("Feature Variance Analysis")
 print("=" * 60)
 
-feature_variance = X.var()
+feature_variance = df.drop(columns=["Label"]).var()
 
 variance_df = pd.DataFrame({
-    "Feature": X.columns,
+    "Feature": df.drop(columns=["Label"]).columns,
     "Variance": feature_variance.values
 })
 
