@@ -19,7 +19,7 @@ PROJECT_ROOT = "/home/dhanush2026/dhanush2026/AI_IDS/ML"
 RESULT_PATH = os.path.join(
     PROJECT_ROOT,
     "RESULTS",
-    "XGBOOST_MULTICLASS_SMOTE",
+    "XGBOOST_MULTICLASS_SMOTE_FV",
     "threshold_0.9"
 )
 
@@ -31,7 +31,7 @@ REPORT_PATH = os.path.join(
 MODEL_PATH = os.path.join(
     PROJECT_ROOT,
     "MODELS",
-    "XGBOOST_MULTICLASS_SMOTE",
+    "XGBOOST_MULTICLASS_SMOTE_FV",
     "threshold_0.9"
 )
 

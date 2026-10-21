@@ -10,12 +10,12 @@ from sklearn.metrics import ConfusionMatrixDisplay
 
 PROJECT_ROOT = "/home/dhanush2026/dhanush2026/AI_IDS/DL"
 
-MODEL_NAME = "CNN_MULTICLASS_SMOTE"
+MODEL_NAME = "ANN_MULTICLASS_SMOTE_FV"
 # PROJECT_ROOT = r"C:\Dhanush\D\MSIS\Mini Project\ML"
 
 # MODEL_NAME = "RandomForest"
 
-THRESHOLD = "0.90"
+THRESHOLD = "0.9"
 
 # ==========================================================
 

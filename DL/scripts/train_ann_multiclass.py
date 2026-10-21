@@ -195,12 +195,12 @@ DATASET_FILE = (
 )
 
 MODEL_DIR = (
-    f"{PROJECT_ROOT}/DL/MODELS/ANN_MULTICLASS_SMOTE/"
+    f"{PROJECT_ROOT}/DL/MODELS/ANN_MULTICLASS_SMOTE_FV/"
     f"threshold_{THRESHOLD}"
 )
 
 RESULT_DIR = (
-    f"{PROJECT_ROOT}/DL/RESULTS/ANN_MULTICLASS_SMOTE/"
+    f"{PROJECT_ROOT}/DL/RESULTS/ANN_MULTICLASS_SMOTE_FV/"
     f"threshold_{THRESHOLD}"
 )
 
@@ -443,7 +443,9 @@ for fold, (train_idx, test_idx) in enumerate(skf.split(X, y), start=1):
     # ==========================================================
     # CHECK TRAINING DATA
     # ==========================================================
-    feature_names = df.drop(columns=["Label"]).columns
+    feature_names = selected_features
+    print(len(feature_names))
+    print(X_train.shape)
     print("\nChecking training data...\n")
     for i, feature in enumerate(feature_names):
      col = X_train[:, i]

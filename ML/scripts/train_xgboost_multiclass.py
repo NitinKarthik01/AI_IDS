@@ -620,7 +620,7 @@ for fold, (train_idx, test_idx) in enumerate(skf.split(X, y), start=1):
 
     importance = pd.DataFrame({
 
-        "Feature": df.drop(columns=["Label"]).columns,
+        "Feature": selected_features,
 
         "Importance": model.feature_importances_
 
