@@ -339,6 +339,70 @@ print("Cleaning Completed.")
 
 X = df.drop(columns=["Label"])
 
+# ==========================================================
+# REMOVE LOW VARIANCE FEATURES
+# ==========================================================
+
+print("\n" + "=" * 60)
+print("Feature Variance Analysis")
+print("=" * 60)
+
+feature_variance = X.var()
+
+variance_df = pd.DataFrame({
+    "Feature": X.columns,
+    "Variance": feature_variance.values
+})
+
+variance_df = variance_df.sort_values(
+    by="Variance",
+    ascending=True
+)
+
+print(variance_df)
+
+variance_df.to_csv(
+    os.path.join(
+        RESULT_DIR,
+        "Feature_Variance.csv"
+    ),
+    index=False
+)
+
+# ----------------------------------------------------------
+# Variance Threshold
+# ----------------------------------------------------------
+
+VARIANCE_THRESHOLD = 0.0001
+
+low_variance_features = variance_df[
+    variance_df["Variance"] < VARIANCE_THRESHOLD
+]["Feature"].tolist()
+
+print("\nLow Variance Features")
+
+for feature in low_variance_features:
+    print(feature)
+
+# ----------------------------------------------------------
+# Drop Features
+# ----------------------------------------------------------
+
+if len(low_variance_features) > 0:
+
+    X.drop(
+        columns=low_variance_features,
+        inplace=True
+    )
+
+    print(f"\nDropped {len(low_variance_features)} features")
+
+else:
+
+    print("\nNo low variance features found.")
+
+print("\nRemaining Features :", X.shape[1])
+
 print("\nFeature Matrix Shape :", X.shape)
 print("Label Vector Shape   :", y.shape)
 
