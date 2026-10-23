@@ -1,0 +1,15 @@
+{
+  "project_root": "/data/dhanush2026/AI_IDS",
+  "dataset": null,
+  "folds": 5,
+  "stack_folds": 3,
+  "rf_trees": 300,
+  "xgb_trees": 1000,
+  "device": "cpu",
+  "jobs": -1,
+  "smote": false,
+  "smote_target": 5000,
+  "smote_max_total": 300000,
+  "skip_stacking": false,
+  "no_final_fit": false
+}
