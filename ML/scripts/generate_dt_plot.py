@@ -14,12 +14,13 @@ from sklearn.metrics import (
 # PATHS
 # ==========================================================
 
-PROJECT_ROOT = "/home/dhanush2026/dhanush2026/AI_IDS/ML"
+# PROJECT_ROOT = "/home/dhanush2026/dhanush2026/AI_IDS/ML"
+PROJECT_ROOT = "C:/Dhanush/D/MSIS/Mini Project/ML"
 
 RESULT_PATH = os.path.join(
     PROJECT_ROOT,
     "RESULTS",
-    "DecisionTree_MULTICLASS",          
+    "RandomForest_MULTICLASS",          
     "threshold_0.90"
 )
 
@@ -145,6 +146,61 @@ plt.close()
 # AVERAGE CONFUSION MATRIX
 # ==========================================================
 
+# cm_files = sorted(
+#     glob.glob(
+#         os.path.join(
+#             RESULT_PATH,
+#             "confusion_matrix_fold_*.csv"
+#         )
+#     )
+# )
+
+# first_cm = pd.read_csv(cm_files[0], index_col=0)
+
+# num_classes = first_cm.shape[0]
+
+# cm_sum = np.zeros((num_classes, num_classes))
+
+# for file in cm_files:
+
+#     cm = pd.read_csv(
+#     file,
+#     index_col=0
+#     ).to_numpy(dtype=float)
+
+#     cm_sum += cm
+
+# cm_avg = cm_sum / len(cm_files)
+
+# labels = first_cm.index.tolist()
+
+# disp = ConfusionMatrixDisplay(
+#     confusion_matrix=cm_avg,
+#     display_labels=labels
+# )
+
+# fig, ax = plt.subplots(figsize=(15,15))
+
+# disp.plot(
+#     ax=ax,
+#     cmap="Blues",
+#     values_format=".1f",
+#     colorbar=False
+# )
+
+# plt.title("Average Confusion Matrix")
+
+# plt.tight_layout()
+
+# plt.savefig(
+#     os.path.join(
+#         REPORT_PATH,
+#         "Average_Confusion_Matrix.png"
+#     ),
+#     dpi=300
+# )
+
+# plt.close()
 cm_files = sorted(
     glob.glob(
         os.path.join(
@@ -154,52 +210,78 @@ cm_files = sorted(
     )
 )
 
+if not cm_files:
+    raise FileNotFoundError(
+        "No confusion matrix CSV files found."
+    )
+
 first_cm = pd.read_csv(cm_files[0], index_col=0)
+labels = first_cm.index.tolist()
 
-num_classes = first_cm.shape[0]
-
-cm_sum = np.zeros((num_classes, num_classes))
+cm_sum = np.zeros(first_cm.shape, dtype=float)
 
 for file in cm_files:
+    cm = pd.read_csv(file, index_col=0)
 
-    cm = pd.read_csv(
-    file,
-    index_col=0
-    ).to_numpy(dtype=float)
+    # Ensure identical row and column ordering
+    cm = cm.reindex(
+        index=labels,
+        columns=first_cm.columns,
+        fill_value=0
+    )
 
-    cm_sum += cm
+    cm_sum += cm.to_numpy(dtype=float)
 
 cm_avg = cm_sum / len(cm_files)
 
-labels = first_cm.index.tolist()
+n_classes = len(labels)
+
+# Dynamic figure size
+fig_size = max(12, min(24, n_classes * 0.45))
+
+fig, ax = plt.subplots(
+    figsize=(fig_size, fig_size)
+)
 
 disp = ConfusionMatrixDisplay(
     confusion_matrix=cm_avg,
     display_labels=labels
 )
 
-fig, ax = plt.subplots(figsize=(6,6))
-
 disp.plot(
     ax=ax,
     cmap="Blues",
     values_format=".1f",
-    colorbar=False
+    colorbar=True,
+    include_values=(n_classes <= 15),
+    xticks_rotation=90
 )
 
-plt.title("Average Confusion Matrix")
+ax.set_title(
+    "Average Confusion Matrix",
+    fontsize=16,
+    pad=15
+)
+
+ax.set_xlabel("Predicted Label", fontsize=11)
+ax.set_ylabel("True Label", fontsize=11)
+
+ax.tick_params(axis="both", labelsize=7)
 
 plt.tight_layout()
+
+os.makedirs(REPORT_PATH, exist_ok=True)
 
 plt.savefig(
     os.path.join(
         REPORT_PATH,
         "Average_Confusion_Matrix.png"
     ),
-    dpi=300
+    dpi=400,
+    bbox_inches="tight"
 )
 
-plt.close()
+plt.close(fig)
 
 print("="*60)
 print("Decision Tree plots generated successfully.")
